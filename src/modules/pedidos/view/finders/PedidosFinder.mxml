@@ -1,0 +1,165 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:Canvas xmlns:mx="http://www.adobe.com/2006/mxml" width="908" 
+	creationComplete="init();" height="500" xmlns:ns1="controls.*" 
+	xmlns:ns2="modules.pedidos.view.cruds.*"
+	xmlns:s="library://ns.adobe.com/flex/spark"	
+	xmlns:flextras="http://www.flextras.com/mxml" 
+	xmlns:ns3="com.adobe.flex.extras.controls.*" xmlns:ns4="modules.pedidos.view.finders.*">
+
+<mx:Script>
+	<![CDATA[
+		import modules.pedidos.events.BuscarLibrosPedidosEvent;
+		import mx.events.CollectionEvent;
+		import modules.pedidos.events.ImprimirPedidoEvent;
+		import modules.pedidos.vo.EditorialVO;
+		import mx.collections.ArrayCollection;
+		import mx.controls.Alert;
+		import modules.pedidos.events.BuscarPedidosEvent;
+		
+	
+
+  import modules.pedidos.vo.PedidoVO;
+  import modules.pedidos.vo.ClienteVO;
+  import modules.pedidos.model.EnterpriseModelLocator;
+  
+  [Bindable] 
+  private var model: EnterpriseModelLocator= EnterpriseModelLocator.Instance; 
+
+  [Bindable] 
+  private var clientes:ArrayCollection;
+  
+  [Bindable] 
+  private var pedidoConsulta:PedidoVO;
+  
+  [Bindable] 
+  private var pedidoConsultaItems:ArrayCollection;
+  
+  [Bindable] 
+  private var librosPedidos:ArrayCollection;
+  
+        private function price_labelFunc(item:Object, column:DataGridColumn):String {
+                return currencyFormatter.format(item[column.dataField]);
+            }
+  
+  
+  private function date_labelFunc(item:Object, column:DataGridColumn):String {
+                return dateFormatter.format(item[column.dataField]);
+  }
+   
+    
+  public function init():void {
+  clientes=new ArrayCollection(model.clientes.toArray());	
+  cmbClienteConsultaPedidos.selectedIndex=-1;
+  dgPedidos.addEventListener(CollectionEvent.COLLECTION_CHANGE, handleChangeEvent);
+  librosPedidos=new ArrayCollection(model.librosPedidos.toArray());
+  }      
+  private function dgPedidosClick():void
+  {
+  	/*model.pedidoConsulta=PedidoVO(dgPedidos.selectedItem);
+  	//psl.items=model.pedidoConsulta.items;  	
+  	psl.txtObservaciones.text=model.pedidoConsulta.pe_observaciones;
+  	psl.txtCliente.text=model.pedidoConsulta.cliente.cl_nombre + "-" + model.pedidoConsulta.cliente.cl_telefono_movil;  
+  	*/
+  	psl.pedido=PedidoVO(dgPedidos.selectedItem);
+  }
+
+
+public function handleChangeEvent(event:CollectionEvent):void
+{
+ this.refreshListaPedidos();
+}
+
+private function refreshListaPedidos():void {
+lblCantPedidos.text= model.pedidosConsulta.length.toString() + " registros";
+}
+  
+  public function imprimirPedido():void {
+      new ImprimirPedidoEvent(model.pedidoConsulta).dispatch();
+	}
+	
+  private function getCl_nombre(cliente : Object): String
+            {
+                return ClienteVO(cliente).cl_nombre + "-" + ClienteVO(cliente).cl_telefono_movil;
+            }
+  
+  private function getCl_nombreDataGrid(item:Object, column:DataGridColumn): String
+            {
+                return ClienteVO(item[column.dataField]).cl_nombre + "-" + ClienteVO(item[column.dataField]).cl_telefono_movil;
+            }
+  
+private function nombreEditorial(item:Object, column:DataGridColumn): String
+            {   
+                if (!(EditorialVO(item[column.dataField])==null)){
+                return EditorialVO(item[column.dataField]).ed_descripcion;
+                } else return "";
+            }  
+              		
+private function btnBuscarClick():void {
+	
+	 var c:ClienteVO=ClienteVO(cmbClienteConsultaPedidos.selectedItem);
+	
+	 new BuscarPedidosEvent(c,dtFechaDesde.selectedDate,dtFechaHasta.selectedDate,acNombreLibro.text).dispatch();
+}
+
+private function btnLimpiarClick():void {
+	
+	model.pedidoConsulta=null;
+	psl.pedido=null;
+    cmbClienteConsultaPedidos.text="";
+    cmbClienteConsultaPedidos.selectedIndex=-1;
+    dtFechaDesde.selectedDate=null;
+    dtFechaHasta.selectedDate=null;
+    acNombreLibro.text="";
+    acNombreLibro.selectedIndex=-1;
+    model.pedidosConsulta=new ArrayCollection();
+    this.refreshListaPedidos();
+}
+
+]]>
+    </mx:Script>
+    
+   <mx:CurrencyFormatter id="currencyFormatter"
+            precision="2"
+            useNegativeSign="false" />
+    
+    <mx:DateFormatter id="dateFormatter" formatString="DD/MM/YYYY" />
+            
+    <mx:Number id="lastRollOverIndex" />
+    
+	<mx:FormItem label="Filtrar por cliente:" width="406" x="10" y="10" height="22">
+	    <ns1:MatchComboBox width="286" id="cmbClienteConsultaPedidos"  
+	        dataProvider="{clientes}"
+	      matchFirstPosition="false" matchCaseSensitive="false" 
+	        labelFunction="getCl_nombre" 
+	        doubleClickEnabled="true"
+	      />
+	</mx:FormItem>
+	<mx:FormItem label="fecha desde:" width="213" x="10" y="36">
+	    <mx:DateField width="115" id="dtFechaDesde"/>
+	</mx:FormItem>
+	<mx:FormItem label="Fecha hasta:" width="213" x="231" y="36" height="22">
+	    <mx:DateField width="115" id="dtFechaHasta"/>
+	</mx:FormItem>
+	<mx:FormItem label="Que contengan libro:" width="532" x="10" y="62" height="26">
+		<ns1:MatchComboBox width="387" id="acNombreLibro"  dataProvider="{librosPedidos}"   />
+	</mx:FormItem>
+	<mx:Button x="449" y="10" label="Buscar" width="93" id="btnBuscar" click="btnBuscarClick()"/>
+	<mx:DataGrid id="dgPedidos" dataProvider="{model.pedidosConsulta}" x="10" y="96" width="675" height="143" 
+		itemRollOver="lastRollOverIndex = event.rowIndex" move="dgPedidosClick()"
+		click="dgPedidosClick()" >
+		
+		<mx:columns>
+			<mx:DataGridColumn headerText="Nro Pedido" dataField="pe_pedido_k" width="100"/>
+			<mx:DataGridColumn headerText="Cliente" width="250" dataField="cliente"  labelFunction="getCl_nombreDataGrid"/>
+			<mx:DataGridColumn headerText="Fecha" dataField="pe_fecha" labelFunction="date_labelFunc"/>
+			<mx:DataGridColumn headerText="Seña" dataField="pe_senia" width="60" labelFunction="price_labelFunc" textAlign="right"/>
+			<mx:DataGridColumn headerText="Total" dataField="pe_total" width="60" labelFunction="price_labelFunc" textAlign="right"/>
+		</mx:columns>
+	</mx:DataGrid>
+	<mx:Button x="449" y="36" label="Limpiar" width="93" id="btnBuscar0" click="btnLimpiarClick()"/>
+	<mx:Label x="562" y="70" width="99" id="lblCantPedidos"/>
+	<ns4:PedidoSoloLectura x="10" y="245" id="psl">
+	</ns4:PedidoSoloLectura>
+	
+	
+</mx:Canvas>

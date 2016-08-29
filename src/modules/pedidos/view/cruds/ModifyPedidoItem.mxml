@@ -1,0 +1,135 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:TitleWindow xmlns:mx="http://www.adobe.com/2006/mxml"
+layout="vertical" title="Modificar Catalogo" creationComplete="centerWindow()"  width="440" height="338"
+showCloseButton="true" close="closeWindow()" 
+verticalAlign="top" verticalScrollPolicy="off" horizontalScrollPolicy="off"
+xmlns:ns1="controls.*">
+
+<mx:Script>
+    <![CDATA[
+      import modules.pedidos.model.EnterpriseModelLocator;
+      import modules.pedidos.vo.EditorialVO;
+      import modules.pedidos.vo.PedidoItemVO;
+      import mx.collections.ArrayCollection;
+      
+      import mx.managers.PopUpManager;
+      import mx.rpc.events.FaultEvent;
+	  import mx.rpc.events.ResultEvent;
+	  import mx.controls.Alert;
+	  
+	  	
+      private var pedidoItem:PedidoItemVO;
+      private var state:String;
+      
+      private var model:EnterpriseModelLocator=EnterpriseModelLocator.Instance;
+      
+      
+      private function centerWindow():void {
+        PopUpManager.centerPopUp(this);
+       
+        
+      }
+      
+      public function setPedidoItem(pi:PedidoItemVO):void {
+      pedidoItem=pi;
+      txtNombreLibro.text=pi.pi_nombre_libro;
+      txtAutor.text=pi.pi_autor;
+      txtEditorial.text=pi.pi_editorial;      
+      txtPrecio.text=currencyFormatter.format(pi.pi_precio);
+      txtIsbn.text=pi.pi_isbn;
+      txtCantidad.value=pi.pi_cantidad;
+      cmbEditoriales.selectedItem=pi.pi_editorial_ed;      
+      }
+      
+      public function setState(s:String):void {
+      state=s;
+       if (state=="insert") {
+        this.title="Insertar Pedido";
+        } else {
+        this.title="Modificar Pedido";
+        } 
+      }
+      
+      private function save():void{
+      if (state=="insert") {
+      pedidoItem= new PedidoItemVO();
+      }
+      pedidoItem.pi_nombre_libro=txtNombreLibro.text
+      pedidoItem.pi_autor=txtAutor.text;      
+      pedidoItem.pi_editorial=txtEditorial.text;
+      pedidoItem.pi_precio=Number(txtPrecio.text);
+      pedidoItem.pi_isbn=txtIsbn.text
+      pedidoItem.pi_cantidad=txtCantidad.value;
+      pedidoItem.pi_editorial_ed=EditorialVO(cmbEditoriales.selectedItem);
+      
+      if (state=="insert") {      	
+      	 model.agregarPedidoItemAPedido(pedidoItem);      	 
+      	 closeWindow();
+      } else {
+      //pedidoItemDAO.update(catalogo);      
+      closeWindow();
+      }
+      
+	  }      
+             
+      private function resultHandlerDAO(event:ResultEvent):void {            
+                PopUpManager.removePopUp(this);
+      }
+
+            // Handle a message fault.
+      private function faultHandlerDAO(event:FaultEvent):void {
+                Alert.show("Received fault in DAO: " + event.fault + "\n");
+      }
+      
+      private function closeWindow():void{
+ 		  PopUpManager.removePopUp(this);
+	  }
+
+    ]]>
+</mx:Script>
+ 
+
+	<mx:CurrencyFormatter id="currencyFormatter"
+            currencySymbol=""
+            precision="2"
+            useNegativeSign="false" />
+
+	<mx:RemoteObject  id="pedidoItemDAO" destination="PedidoItemDAO" source="model.librosmario.PedidoItemDAO"
+		 result="resultHandlerDAO(event);"
+        fault="faultHandlerDAO(event);"
+        />
+        
+            
+  <mx:Form width="386" height="251" horizontalScrollPolicy="off" verticalScrollPolicy="off">
+    <mx:FormItem label="Libro">
+      <mx:TextInput id="txtNombreLibro" width="253"/>
+    </mx:FormItem>
+    <mx:FormItem label="Autor">
+      <mx:TextInput id="txtAutor"/>
+    </mx:FormItem>
+    <mx:FormItem label="Editorial">
+      <mx:TextInput id="txtEditorial"/>
+    </mx:FormItem>
+    <mx:FormItem label="Pecio">
+      <mx:TextInput id="txtPrecio" textAlign="right"/>
+    </mx:FormItem>
+    <mx:FormItem label="Isbn">
+      <mx:TextInput id="txtIsbn" textAlign="right"/>
+    </mx:FormItem>
+    <mx:FormItem label="Cantidad" width="232">
+      <mx:NumericStepper width="160" id="txtCantidad" minimum="1" maximum="100" stepSize="1" textAlign="right"/>
+    </mx:FormItem>
+    <mx:FormItem label="Distribuidora" width="229">
+      <ns1:FindSelectedItemComboBox width="160"	
+      	id="cmbEditoriales"		          	
+      	dataProvider="{model.editoriales}"
+      	labelField="ed_descripcion"
+      	>      	
+      </ns1:FindSelectedItemComboBox>
+    </mx:FormItem>
+  </mx:Form>
+  <mx:HBox width="100%" height="28" verticalAlign="middle">
+    <mx:Button label="Save" click="save()"/>
+    <mx:Button label="Close" click="closeWindow()"/>
+  </mx:HBox>
+</mx:TitleWindow>

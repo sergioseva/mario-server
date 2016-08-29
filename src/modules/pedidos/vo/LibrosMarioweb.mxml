@@ -1,0 +1,233 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:Application xmlns:mx="http://www.adobe.com/2006/mxml" layout="absolute" height="100%" xmlns:local="*" 
+    creationComplete="init();" xmlns:ns1="controls.*" width="100%"
+     xmlns:fx="http://ns.adobe.com/mxml/2009"
+    xmlns:s="library://ns.adobe.com/flex/spark"
+    xmlns:business="common.business.*" 
+    xmlns:cairngorm="com.adobe.cairngorm.*"
+    xmlns:pedidosControl="modules.pedidos.control.*"
+    xmlns:spicefactory="http://www.spicefactory.org/parsley"
+    xmlns:views="modules.pedidos.view.cruds.*"
+    xmlns:finders="modules.pedidos.view.finders.*">
+    <pedidosControl:PedidosControl id="controlPedidos"/>
+	<business:Services id="services"/>
+	
+    <!--
+    <mx:Style>
+        Alert   {
+            background-color: #000000;
+            cornerRadius: 8;
+            creationCompleteEffect: myEffect;
+            title-style-name:alertTitle;
+            color:#999999;
+            font-family:verdana;
+            font-size:11;
+            area-fill:#000000;
+            border-color:#000000;
+            border-style:solid;
+            drop-shadow-enabled:true;
+            shadow-direction:center;
+            shadow-distance:0;
+            drop-shadow-color:#000000;            
+            fill-colors:#000000;
+            }
+    </mx:Style>
+    -->
+    <mx:Script>
+    <![CDATA[
+    	import mx.binding.utils.BindingUtils;
+    	import modules.pedidos.view.cruds.ModifyCliente;
+    	import modules.pedidos.view.cruds.ModifyCatalogo;
+    	import modules.pedidos.view.cruds.ModifyPedidoItem;
+    	import modules.pedidos.events.ImprimirPedidoEvent;
+    	import modules.pedidos.events.ObtenerEditorialesEvent;
+    	import modules.pedidos.events.ObtenerClientesEvent;
+    	import modules.pedidos.model.EnterpriseModelLocator;    	
+    	import modules.pedidos.events.BuscarCatalogoEvent;    
+        import mx.managers.CursorManager;
+        import mx.controls.Alert;
+        import mx.rpc.events.FaultEvent;
+        import mx.rpc.events.ResultEvent;
+        import mx.events.CollectionEvent;
+        import mx.collections.ArrayCollection;
+        import mx.managers.PopUpManager;
+        import mx.events.ItemClickEvent;                    
+        import mx.core.IFlexDisplayObject;        
+        import modules.pedidos.vo.*;
+        import mx.validators.Validator;
+
+            
+           
+        
+        var modifyClienteWindow:IFlexDisplayObject;
+        var myModifyClienteWindow:ModifyCliente;   
+                    
+        
+        var catalogoExpandido:Boolean=false;
+        
+        var espereWindow:Alert;
+        
+         
+             
+         [Bindable] 
+         private var model: EnterpriseModelLocator= EnterpriseModelLocator.Instance; 
+         
+         [Bindable]
+        private var combofac:ClassFactory;        
+       	
+       	    
+             private function init():void
+            {           
+            new ObtenerClientesEvent().dispatch();
+            new ObtenerEditorialesEvent().dispatch();
+            expandirContraerCatalogo();
+            model.newPedido();
+            combofac=new ClassFactory(mx.controls.ComboBox);
+            combofac.properties={dataProvider:model.editoriales};
+            combofac.properties={labelField:"ed_descripcion"};
+            Alert.yesLabel = "Si";
+            Alert.noLabel = "No";
+			}
+          
+            
+            
+           
+    
+            private function importarCatalogo():void {
+                catalogoConverter.importarLuongo();     
+                //Alert.buttonHeight=0;
+                //Alert.buttonWidth=0;             
+                espereWindow = Alert.show("espere","Importando datos, esta operacion puede tardar varios minutos, aunque ud cierre la ventanala importacion continuarà");
+            }
+             
+             
+            // Handle the recevied message.
+            private function resultHandler(event:ResultEvent):void {
+                PopUpManager.removePopUp(espereWindow);
+                Alert.buttonHeight=22;
+                Alert.buttonWidth=60;  
+                Alert.show(event.result.toString());
+            }
+
+            // Handle a message fault.
+            private function faultHandler(event:FaultEvent):void {
+                PopUpManager.removePopUp(espereWindow);
+                Alert.show("Received fault: " + event.fault + "\n");
+            }
+                  
+            private function insertSuccess(event:ResultEvent):void {
+                Alert.show("bien");
+                //Alert.show(event.message.body.toString());
+            }
+            
+            private function insertFail(event:FaultEvent):void {
+                Alert.show("Mal");
+                //Alert.show("Received fault in DAO: " + event.fault + "\n");
+            }
+           
+   
+           private function expandirContraerCatalogo():void {
+                
+                if (catalogoExpandido)   {
+                btnExpandirContraer.label="Expandir Catalogo";        
+                divCatalogoPedidos.getDividerAt(0).y=application.height/2.3;
+                catalogoExpandido=false;
+                } else
+                {
+                btnExpandirContraer.label="Contraer Catalogo";        
+                divCatalogoPedidos.getDividerAt(0).y=application.height;                
+                catalogoExpandido=true;
+                }
+           }
+           
+            
+                 
+
+                
+
+            
+             private function nuevoPedidoSuccess(event:ResultEvent):void {
+                model.pedido= event.result as PedidoVO;
+                
+                //Alert.show("Server responded: "+ event.result + "\n");
+                //Alert.show(event.message.body.toString());
+            }
+
+            // Handle a message fault.
+            private function nuevoPedidoFail(event:FaultEvent):void {
+                Alert.show("Received fault in Clientes DAO: " + event.fault + "\n");
+            }
+            
+            private function agregarItemAPedidoSuccess(event:ResultEvent):void {
+                
+                //dgPedidoItems.invalidateDisplayList();
+                model.pedido.items= event.result as ArrayCollection;
+                //Alert.show("Server responded: "+ event.result + "\n");
+                //Alert.show(event.message.body.toString());
+            }
+
+            // Handle a message fault.
+            private function agregarItemAPedidoFail(event:FaultEvent):void {
+                Alert.show("Received fault in Clientes DAO: " + event.fault + "\n");
+            }
+               
+           public function agregarItemAClientes(cliente:ClienteVO):void {
+           model.ultimoClienteInsertado=cliente;
+           new ObtenerClientesEvent().dispatch();
+           }	
+    			          
+         ]]>
+    </mx:Script>
+    
+
+    <!-- agregado nuevo-->    
+
+    <mx:CurrencyFormatter id="currencyFormatter"
+            precision="2"
+            useNegativeSign="false" />
+ 
+    <mx:RemoteObject  id="catalogoConverter" destination="CatalogoConverter" source="model.librosmario.CatalogoConverter"
+         result="resultHandler(event);"
+        fault="faultHandler(event);">         
+     </mx:RemoteObject>
+
+    <mx:ApplicationControlBar width="100%" height="35" left="0" top="0" horizontalAlign="left" horizontalGap="0" verticalAlign="middle">
+        <mx:TabBar width="384" height="29" dataProvider="viewstack1">
+         
+        </mx:TabBar>
+        <mx:Button label="Importar Catalogo" id="btnImportarCatalogo" 
+            click="importarCatalogo()"
+            fillAlphas="[1.0, 1.0, 1.0, 1.0]" fillColors="[#E3E0F9, #F12A67]"/>
+        <mx:Button id="btnExpandirContraer" label="Expandir Catalogo" width="131"
+            click="expandirContraerCatalogo();"
+            />
+    </mx:ApplicationControlBar>
+    
+    
+    
+    <mx:ViewStack x="0" y="43" id="viewstack1" width="1000" height="100%" label="Hola">
+        <mx:Canvas label="Busqueda" width="100%" height="100%">
+            <mx:VDividedBox id="divCatalogoPedidos" x="0" y="0" height="100%" width="990">
+                <mx:Canvas width="965" height="50%">
+					<finders:CatalogosFinder x="0" y="0" height="100%" width="100%" top="0">
+                      </finders:CatalogosFinder>
+                </mx:Canvas>
+                <!--Pedidos-->
+                 <mx:Canvas width="100%" height="50%">
+                      <views:Pedido x="0" height="100%" width="984" top="0">
+                      </views:Pedido>
+                 </mx:Canvas>
+            </mx:VDividedBox>
+        </mx:Canvas>
+        <mx:Canvas label="Pedidos a Distribuidoras" width="100%" height="100%" click="" >
+        <views:GeneradorPedidoADistribuidoras x="0" y="0" height="100%" width="100%" top="0">
+                      </views:GeneradorPedidoADistribuidoras>
+        </mx:Canvas>
+    </mx:ViewStack>
+        
+    <!-- <mx:Button label="createPopup" click="createPopup();" x="167" y="10"/> -->
+    
+    
+    
+
+</mx:Application>

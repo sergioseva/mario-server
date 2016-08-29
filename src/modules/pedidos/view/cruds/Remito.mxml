@@ -1,0 +1,227 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:Canvas xmlns:mx="http://www.adobe.com/2006/mxml" 
+	xmlns:ns1="controls.*"
+	creationComplete="init();"
+	width="984" height="258" xmlns:model="modules.pedidos.model.*" backgroundAlpha="1.0">
+	<mx:Script>
+    <![CDATA[
+    	import modules.pedidos.vo.RemitoItemVO;
+    	import modules.pedidos.vo.EditorialVO;
+    	import modules.pedidos.model.EnterpriseModelLocator;
+    	import mx.events.AdvancedDataGridEvent;
+    	import modules.pedidos.events.ImprimirRemitoEvent;
+    	import modules.pedidos.events.InsertarRemitoEvent;
+    	
+    	import mx.binding.utils.BindingUtils;
+    	
+    	import modules.pedidos.vo.EditorialVO;
+    	
+    	import mx.validators.Validator;
+    	import modules.pedidos.vo.RemitoVO;
+    	import modules.pedidos.vo.RemitoItemVO;
+    	import mx.core.IFlexDisplayObject;
+    	import mx.managers.PopUpManager;
+    	import modules.pedidos.model.EnterpriseModelLocator;
+    	import mx.controls.Alert;
+    	import modules.pedidos.vo.ClienteVO;
+    	import mx.rpc.events.FaultEvent;
+    	import mx.rpc.events.ResultEvent;
+    	import mx.events.CollectionEvent;
+	 	
+	 	[Bindable] 
+         private var model: EnterpriseModelLocator= EnterpriseModelLocator.Instance; 
+        
+        [Bindable] 
+  		private var distribuidoras:ArrayCollection;
+        
+        [Bindable]
+        var totalRemito:Number;
+         
+		var modifyRemitoItemWindow:IFlexDisplayObject;
+        var myModifyRemitoItemWindow:ModifyRemitoItem;    
+         
+        var modifyClienteWindow:IFlexDisplayObject;
+        var myModifyClienteWindow:ModifyCliente;   
+        
+        
+         public  function init():void
+         {
+         btnImprimirRemito.enabled=false; 
+         this.cmbDistribuidoras.visible=true;
+         BindingUtils.bindSetter(handlerOkInsertarRemito, model, "insertarRemitoOk");
+         model=EnterpriseModelLocator.Instance;
+         
+         distribuidoras=new ArrayCollection(model.editoriales.toArray());	
+         }
+         
+        private function handlerOkInsertarRemito(obj:Object):void {       
+		if(!obj) return;
+			model.remito.finalizado=true;
+            Alert.show( "Remito insertado correctamente, desea imprimirlo?",
+                         "Confirmar ", 
+                         Alert.YES| Alert.NO,
+                         null,                         
+                         handleAlertImprimir, 
+                         null,
+                         Alert.YES);
+            btnImprimirRemito.enabled=true;
+            btnFinalizarRemito.enabled=false; 
+            model.insertarRemitoOk=false;                    	
+		}	
+		
+         
+          private function modificarItemDeRemito(event:MouseEvent):void {
+           // show the popup
+            modifyRemitoItemWindow=PopUpManager.createPopUp(DisplayObject(parentDocument),ModifyRemitoItem, true);
+            myModifyRemitoItemWindow=ModifyRemitoItem(modifyRemitoItemWindow);
+            myModifyRemitoItemWindow.setRemitoItem(RemitoItemVO(dgRemitoItems.selectedItem));
+            myModifyRemitoItemWindow.setState("modify");
+           }
+           
+           private function eliminarItem():void {
+           // show the popup
+            model.remito.items.removeItemAt(model.remito.items.getItemIndex(dgRemitoItems.selectedItem));
+            //this.recalcularTotalRemito();
+           } 
+           
+           private function itemClickHandler():void {
+           dgRemitoItems.editedItemPosition= (2,2);
+           dgRemitoItems.dispatchEvent(new AdvancedDataGridEvent(mx.events.AdvancedDataGridEvent.ITEM_EDIT_BEGIN,false,false,0,null, dgRemitoItems.selectedIndex,null));
+		
+           }
+           private function nuevoRemito():void {
+           	model.newRemito();
+            btnFinalizarRemito.enabled=true;
+            btnImprimirRemito.enabled=false;
+            blanquearRemito();
+            }
+            
+            private function finalizarRemito():void {
+            	
+            if (model.remito.items.length==0) {
+            Alert.show("No hay items seleccionados para el remito");
+            } else           
+             if (!validarRemito()) {            
+            Alert.show("Los valores del remito no son correctos, revisar los campos en rojo", 
+                   "Error en los datos ingresados");
+            }
+            else {
+            	model.remito.re_observaciones=txtObservaciones.text;
+            	model.remito.re_distribuidora_ed =EditorialVO(cmbDistribuidoras.selectedItem);
+                new InsertarRemitoEvent(model.remito).dispatch();                  
+                }
+            }  
+            
+            private function blanquearRemito ():void {
+                model.newRemito();
+                cmbDistribuidoras.text="";
+                cmbDistribuidoras.selectedIndex=-1;
+                txtObservaciones.text="";
+
+            }
+            
+            
+            private function validarRemito():Boolean{
+			    var validatorArr:Array = new Array();
+			    validatorArr.push(validadorDistribuidoras);			    
+			    var validatorErrorArray:Array = Validator.validateAll(validatorArr);;
+			    var isFormValido:Boolean = validatorErrorArray.length == 0;
+			    return isFormValido;
+			}
+			
+            private function price_labelFunc(item:Object, column:DataGridColumn):String {
+                return currencyFormatter.format(item[column.dataField]);
+            }
+            
+            public function imprimirRemito():void {
+      		new ImprimirRemitoEvent(model.remito).dispatch();
+      		}
+      		
+           
+           
+             private function getEd_nombre(distribuidora : Object): String
+            {
+                return EditorialVO(distribuidora).ed_descripcion;
+            }
+           
+           private function agregarItem():void {
+           // show the popup
+            modifyRemitoItemWindow=PopUpManager.createPopUp(DisplayObject(parentDocument),ModifyRemitoItem, true);
+            myModifyRemitoItemWindow=ModifyRemitoItem(modifyRemitoItemWindow);            
+            myModifyRemitoItemWindow.setState("insert");
+           } 
+            
+         
+          private function handleAlertImprimir(event:Object):void {
+            if( event.detail == Alert.YES)
+			    {
+			    this.imprimirRemito()();
+			    }
+			    else if( event.detail == Alert.NO)
+			    {
+			    // blanquearRemito();
+			    }
+            }
+             
+           private function nombreEditorial(item:Object, column:DataGridColumn): String
+            {   
+                if (!(EditorialVO(item[column.dataField])==null)){
+                return EditorialVO(item[column.dataField]).ed_descripcion;
+                } else return "";
+            }  
+                      
+	     ]]>
+    </mx:Script>
+   <!-- <model:EnterpriseModelLocator id="model" >
+    </model:EnterpriseModelLocator>
+    -->
+     <mx:CurrencyFormatter id="currencyFormatter"
+            precision="2"
+            useNegativeSign="false" />
+            
+     <mx:ArrayCollection id="remitoItems" list="{model.remito.items}"		/>
+ 
+ 	<mx:StringValidator id="validadorDistribuidoras" 
+        source="{cmbDistribuidoras}" 
+        property="selectedItem"
+        trigger="{btnFinalizarRemito}" triggerEvent="click"
+        requiredFieldError="Debe seleccionar una distribuidora" 
+        required="true"/>
+        
+       
+	<mx:DataGrid id="dgRemitoItems" x="0" y="29" height="193"   
+                          doubleClick="modificarItemDeRemito(event)" 
+                        doubleClickEnabled="true"  
+                          editable="true" dataProvider="{remitoItems}" width="974"   >
+                           <mx:columns>
+                                <mx:DataGridColumn headerText="Libro" width="200" dataField="ri_nombre_libro" itemRenderer="mx.controls.Label"/>
+                                <mx:DataGridColumn headerText="Autor"  dataField="ri_autor" itemRenderer="mx.controls.Label"/>
+                                <mx:DataGridColumn headerText="Editorial" dataField="ri_editorial" itemRenderer="mx.controls.Label"/>
+                                <mx:DataGridColumn headerText="ISBN" dataField="ri_isbn" itemRenderer="mx.controls.Label"/>
+                                <mx:DataGridColumn headerText="Cantidad" editable="true" dataField="ri_cantidad" width="60" itemEditor="controls.IncrementoNumerico"
+                                     editorDataField="value" textAlign="right" />
+								<mx:DataGridColumn headerText="Factura" editable="true" dataField="ri_factura" itemRenderer="mx.controls.Label"/>                                     
+								<mx:DataGridColumn headerText="Motivo" editable="true" dataField="ri_motivo" itemRenderer="mx.controls.Label" />
+                           </mx:columns>
+                      </mx:DataGrid>
+                             
+                   
+                      <mx:Label x="0" y="2" text="Distribuidora:"/>
+                  
+                      <ns1:MatchComboBox x="78" y="0" width="250" id="cmbDistribuidoras"  
+                          dataProvider="{distribuidoras}"
+                        matchFirstPosition="false" matchCaseSensitive="false" 
+                          labelFunction="getEd_nombre" 
+                          doubleClickEnabled="true"
+                        	/>
+
+                      <mx:Button x="172.4" y="227" label="Nuevo Remito" width="120.6" click="nuevoRemito();" id="btnNuevoRemito"/>
+                      <mx:Button x="301" y="227" id="btnFinalizarRemito" label="Finalizar Remito en curso" width="171" click="finalizarRemito()"/>
+                      <mx:Label x="336" y="2" text="Observaciones:" width="102" />
+                      <mx:TextArea x="428" y="1" width="546" height="20" id="txtObservaciones" text="{model.remito.re_observaciones}"/>
+                      <mx:Button x="91" y="227" label="Agregar" id="btnAgregarItem" click="agregarItem();"/>
+                      <mx:Button x="11" y="227" label="Eliminar" id="btnEliminarItem" click="eliminarItem();"/>
+                      <mx:Button x="475" y="227" id="btnImprimirRemito" label="Imprimir Remito" width="132" click="imprimirRemito()"/>
+
+	
+</mx:Canvas>

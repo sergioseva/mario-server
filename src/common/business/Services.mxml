@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="utf-8"?>
+<cairngorm:ServiceLocator 
+	xmlns:mx="http://www.adobe.com/2006/mxml" 
+	xmlns:cairngorm="com.adobe.cairngorm.business.*">
+	
+    <mx:RemoteObject  id="catalogoConverter" destination="CatalogoConverter" source="model.librosmario.CatalogoConverter"
+    result="event.token.resultHandler( event );"  
+	fault="event.token.faultHandler( event );"	
+ 	concurrency="multiple" showBusyCursor="true"/>
+
+    <mx:RemoteObject  id="sistema" destination="Sistema" source="model.librosmario.Sistema"
+    result="event.token.resultHandler( event );"  
+	fault="event.token.faultHandler( event );"
+    concurrency="multiple" showBusyCursor="true"/>
+        
+	<mx:RemoteObject  id="pedidoPrinter" destination="PedidoPrinter" source="reports.PedidoPrinter" 
+		result="event.token.resultHandler( event );"  
+		 fault="event.token.faultHandler( event );" 
+		concurrency="multiple" showBusyCursor="true"/>
+   
+   <mx:RemoteObject  id="pedidoItemsPrinter" destination="PedidoItemsPrinter" source="reports.PedidoItemsPrinter" 
+		result="event.token.resultHandler( event );"  
+		 fault="event.token.faultHandler( event );" 
+		concurrency="multiple" showBusyCursor="true"/>
+    
+    <mx:RemoteObject  id="remitoPrinter" destination="RemitoPrinter" source="reports.RemitoPrinter" 
+		result="event.token.resultHandler( event );"  
+		 fault="event.token.faultHandler( event );" 
+		concurrency="multiple" showBusyCursor="true"/>
+        
+    <mx:RemoteObject  id="catalogoDAO" destination="CatalogoDAO" source="dao.CatalogoDAO"
+    	 result="event.token.resultHandler( event );"  
+		 fault="event.token.faultHandler( event );" 
+		 concurrency="multiple" showBusyCursor="true"/>
+        
+    <mx:RemoteObject  id="pedidoDAO" destination="PedidoDAO" source="dao.PedidoDAO"   
+    	result="event.token.resultHandler( event );"  
+		 fault="event.token.faultHandler( event );" 
+        concurrency="multiple" showBusyCursor="true"/>
+        
+    <mx:RemoteObject  id="pedidoADistribuidoraDAO" destination="PedidoADistribuidoraDAO" source="dao.PedidoADistribuidoraDAO"   
+    	result="event.token.resultHandler( event );"  
+		 fault="event.token.faultHandler( event );" 
+        concurrency="multiple" showBusyCursor="true"/>    
+        
+    <mx:RemoteObject  id="editorialDAO" destination="EditorialDAO" source="dao.EditorialDAO"     
+    	 result="event.token.resultHandler( event );"  
+		 fault="event.token.faultHandler( event );"    
+        concurrency="multiple" showBusyCursor="true"/>
+            
+	 <mx:RemoteObject  id="clienteDAO" destination="ClienteDAO" source="dao.ClientesDAO"
+	 	 result="event.token.resultHandler( event );"  
+		 fault="event.token.faultHandler( event );" 
+    	concurrency="multiple" showBusyCursor="true"/>   
+    	
+   	<mx:RemoteObject  id="pedidoItemDAO" destination="PedidoItemDAO" source="dao.PedidoItemDAO"
+	 	 result="event.token.resultHandler( event );"  
+		 fault="event.token.faultHandler( event );" 
+    	concurrency="multiple" showBusyCursor="true"/>   
+
+    <mx:RemoteObject  id="remitoDAO" destination="RemitoDAO" source="dao.RemitoDAO"   
+    	result="event.token.resultHandler( event );"  
+		 fault="event.token.faultHandler( event );" 
+        concurrency="multiple" showBusyCursor="true"/>
+        
+	<mx:RemoteObject  id="remitoItemDAO" destination="RemitoItemDAO" source="dao.RemitoItemDAO"
+	 	 result="event.token.resultHandler( event );"  
+		 fault="event.token.faultHandler( event );" 
+    	concurrency="multiple" showBusyCursor="true"/>       	
+    	
+</cairngorm:ServiceLocator>

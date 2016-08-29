@@ -1,0 +1,408 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:Canvas xmlns:mx="http://www.adobe.com/2006/mxml" 
+	xmlns:ns1="controls.*"
+	creationComplete="init();"
+	width="984" height="278" xmlns:model="modules.pedidos.model.*" backgroundAlpha="1.0">
+	<mx:Script>
+    <![CDATA[
+    	import modules.pedidos.events.EliminarClienteEvent;
+    	import modules.pedidos.events.ObtenerClientesEvent;
+    	import mx.binding.utils.BindingUtils;
+    	import modules.pedidos.events.InsertarPedidoEvent;
+    	import modules.pedidos.vo.EditorialVO;
+    	import modules.pedidos.events.ImprimirPedidoEvent;
+    	import mx.validators.Validator;
+    	import modules.pedidos.vo.PedidoVO;
+    	import modules.pedidos.vo.PedidoItemVO;
+    	import mx.core.IFlexDisplayObject;
+    	import mx.managers.PopUpManager;
+    	import modules.pedidos.model.EnterpriseModelLocator;
+    	import mx.controls.Alert;
+    	import modules.pedidos.vo.ClienteVO;
+    	import mx.rpc.events.FaultEvent;
+    	import mx.rpc.events.ResultEvent;
+    	import mx.events.CollectionEvent;
+	 	
+	 	[Bindable] 
+         private var model: EnterpriseModelLocator= EnterpriseModelLocator.Instance; 
+        
+        [Bindable]
+        var totalPedido:Number;
+         
+		var modifyPedidoItemWindow:IFlexDisplayObject;
+        var myModifyPedidoItemWindow:ModifyPedidoItem;    
+         
+        var modifyClienteWindow:IFlexDisplayObject;
+        var myModifyClienteWindow:ModifyCliente;   
+        
+         private var soloLectura:Boolean;
+         
+         public function setSoloLectura(b:Boolean):void {
+         this.soloLectura=b;
+         }
+         
+         public function getSoloLectura():Boolean{
+         return this.soloLectura;
+         }
+         
+         public  function init():void
+         {
+         btnImprimirPedido.enabled=false; 
+         this.cmbCliente.visible=true;
+		this.txtCliente.visible=false;
+         BindingUtils.bindSetter(handlerOkInsertarPedido, model, "insertarPedidoOk");
+         BindingUtils.bindSetter(handlerOkEliminarCliente, model, "clienteEliminadoOk");
+         BindingUtils.bindSetter(handlerOkInsertarCliente, model, "insertarClienteOk");
+         BindingUtils.bindSetter(handlerOkActualizarCliente, model, "actualizarClienteOk");
+         BindingUtils.bindSetter(seleccionarUltimoCliente, model, "clientesActualizados");
+         
+         model=EnterpriseModelLocator.Instance;
+         soloLectura=false;
+         }
+         
+        private function handlerOkInsertarPedido(obj:Object):void {
+		if(!obj) return;
+			model.pedido.finalizado=true;
+            Alert.show( "Pedido insertado correctamente, desea imprimirlo?",
+                         "Confirmar ", 
+                         Alert.YES| Alert.NO,
+                         null,                         
+                         handleAlertImprimir, 
+                         null,
+                         Alert.YES);
+            btnImprimirPedido.enabled=true;
+            btnFinalizarPedido.enabled=false; 
+            model.insertarPedidoOk=null;                    	
+		}	
+		
+		private function handlerOkInsertarCliente(obj:Object):void {
+		if(!obj) return;
+		//Alert.show("cliente insertado");
+		//cmbCliente.prompt=model.ultimoClienteInsertado.cl_nombre;
+		model.clientesActualizados=false;
+		new ObtenerClientesEvent().dispatch();
+		model.insertarClienteOk=false;	
+		}
+		
+		private function seleccionarUltimoCliente(obj:Object):void {
+		if(!obj) return;
+//		Alert.show("seleccionar ultimo cliente");
+		cmbCliente.text=model.ultimoClienteInsertado.cl_nombre + "-" + model.ultimoClienteInsertado.cl_telefono_movil;
+		cmbCliente.validateSelection();
+		}
+		
+		private function handlerOkActualizarCliente(obj:Object):void {
+		if(!obj) return;
+			Alert.show("Cliente actualizado correctamente");
+			
+		}
+		
+		private function handlerOkEliminarCliente(obj:Object):void {
+		if(!obj) return;
+			Alert.show("Cliente eliminado correctamente");
+			new ObtenerClientesEvent().dispatch();
+			
+		}
+         
+          private function modificarItemDePedido(event:MouseEvent):void {
+           // show the popup
+            modifyPedidoItemWindow=PopUpManager.createPopUp(DisplayObject(parentDocument),ModifyPedidoItem, true);
+            myModifyPedidoItemWindow=ModifyPedidoItem(modifyPedidoItemWindow);
+            myModifyPedidoItemWindow.setPedidoItem(PedidoItemVO(dgPedidoItems.selectedItem));
+            myModifyPedidoItemWindow.setState("modify");
+           }
+           
+           private function eliminarItem():void {
+           // show the popup
+            model.pedido.items.removeItemAt(model.pedido.items.getItemIndex(dgPedidoItems.selectedItem));
+            //this.recalcularTotalPedido();
+           } 
+           
+           private function nuevoPedido():void {
+           	model.newPedido();
+            btnFinalizarPedido.enabled=true;
+            btnImprimirPedido.enabled=false;
+            blanquearPedido();
+            }
+            
+            private function finalizarPedido():void {
+            	
+            if (model.pedido.items.length==0) {
+            Alert.show("No hay items seleccionados para el pedido");
+            } else           
+             if (!validarPedido()) {            
+            Alert.show("Los valores del pedido no son correctos, revisar los campos en rojo", 
+                   "Error en los datos ingresados");
+            }
+            else {
+                model.pedido.cliente=ClienteVO(cmbCliente.selectedItem);
+                model.pedido.pe_adomicilio=chkDomicilio.selected;
+                model.pedido.pe_total=model.totalPedido();
+                model.pedido.pe_senia=Number(txtSenia.text);
+                model.pedido.pe_fecha_envio=dtFechaEnvio.selectedDate;
+                model.pedido.pe_domicilio=txtDomicilio.text;
+                model.pedido.pe_observaciones=txtObservaciones.text;
+                new InsertarPedidoEvent(model.pedido).dispatch();                 
+                }
+            }  
+            
+            private function blanquearPedido ():void {
+                model.newPedido();
+                cmbCliente.text="";
+                cmbCliente.selectedIndex=-1;
+                txtSenia.text="";
+                txtObservaciones.text="";
+                chkDomicilio.selected=false;
+                txtDomicilio.enabled=false;
+                txtDomicilio.text="";
+                dtFechaEnvio.enabled=false;
+                dtFechaEnvio.text="";
+            }
+            
+            private function modificarCliente():void {
+           // show the popup
+            modifyClienteWindow=PopUpManager.createPopUp(DisplayObject(parentDocument),ModifyCliente, true);
+            myModifyClienteWindow=ModifyCliente(modifyClienteWindow);
+            myModifyClienteWindow.setCliente(ClienteVO(cmbCliente.selectedItem));
+            myModifyClienteWindow.setState("modify");
+           }
+            
+            private function validarPedido():Boolean{
+			    var validatorArr:Array = new Array();
+			    validatorArr.push(validadorCliente);
+			    validatorArr.push(validadorDomiclilio);
+			    validatorArr.push(validadorSenia);
+			    validatorArr.push(validadorFecha);
+			    var validatorErrorArray:Array = Validator.validateAll(validatorArr);;
+			    var isFormValido:Boolean = validatorErrorArray.length == 0;
+			    return isFormValido;
+			}
+			
+            private function onCollectionChange(event:CollectionEvent):void {
+ 		    // Update code here
+   			dgPedidoItems.executeBindings();
+   			recalcularTotalPedido();
+			} 
+           private function chkDomicilio_click():void {
+                var cliente:ClienteVO
+                cliente=ClienteVO(cmbCliente.selectedItem);
+                txtDomicilio.text="";
+                dtFechaEnvio.text="";
+                txtDomicilio.enabled=chkDomicilio.selected;
+                dtFechaEnvio.enabled=chkDomicilio.selected;
+                if ((chkDomicilio.selected) && (!(cliente==null))) {
+                txtDomicilio.text=cliente.cl_direccion;
+                }
+            };
+           
+            private function price_labelFunc(item:Object, column:DataGridColumn):String {
+                return currencyFormatter.format(item[column.dataField]);
+            }
+            
+            public function imprimirPedido():void {
+      		new ImprimirPedidoEvent(model.pedido).dispatch();
+      		}
+      		
+           public function recalcularTotalPedido():void {
+               txtTotal.text=currencyFormatter.format(model.totalPedido().toString());
+               totalPedido=model.totalPedido()();
+           }
+           
+           private function selectTextCliente():void {
+          
+             
+           }
+           
+           private function agregarItem():void {
+           // show the popup
+            modifyPedidoItemWindow=PopUpManager.createPopUp(DisplayObject(parentDocument),ModifyPedidoItem, true);
+            myModifyPedidoItemWindow=ModifyPedidoItem(modifyPedidoItemWindow);            
+            myModifyPedidoItemWindow.setState("insert");
+           } 
+		 private function getCl_nombre(cliente : Object): String
+            {
+                return ClienteVO(cliente).cl_nombre + "-" + ClienteVO(cliente).cl_telefono_movil;
+            }
+            
+         
+          private function handleAlertImprimir(event:Object):void {
+            if( event.detail == Alert.YES)
+			    {
+			    this.imprimirPedido();
+			    }
+			    else if( event.detail == Alert.NO)
+			    {
+			    // blanquearPedido();
+			    }
+            }
+             
+           private function nombreEditorial(item:Object, column:DataGridColumn): String
+            {   
+                if (!(EditorialVO(item[column.dataField])==null)){
+                return EditorialVO(item[column.dataField]).ed_descripcion;
+                } else return "";
+            }  
+            
+            private function nuevoCliente():void {			 
+           // show the popup
+           	model.insertarClienteOk=false;
+            modifyClienteWindow=PopUpManager.createPopUp(DisplayObject(parentDocument),ModifyCliente, true);
+            myModifyClienteWindow=ModifyCliente(modifyClienteWindow);
+            myModifyClienteWindow.setState("insert");
+           }
+           
+           private function confirmaEliminarCliente():void {			 
+           // show the popup
+           if (cmbCliente.selectedIndex!=-1) {
+           Alert.show( "Realmente desea eliminar el cliente " + ClienteVO(cmbCliente.selectedItem).cl_nombre + "?" ,
+                         "Confirmar ", 
+                         Alert.YES| Alert.NO,
+                         null,                         
+                         confirmarEliminarClienteHandler, 
+                         null,
+                         Alert.NO);
+           }
+           
+           }   
+           
+           private function confirmarEliminarClienteHandler(event:Object):void {
+            if( event.detail == Alert.YES)
+			    {
+			    this.eliminarCliente();
+			    }
+			    else if( event.detail == Alert.NO)
+			    {
+			    // blanquearPedido();
+			    }
+           }
+           
+           private function eliminarCliente():void {
+           	    new EliminarClienteEvent(ClienteVO(cmbCliente.selectedItem)).dispatch();
+           }
+           
+	     ]]>
+    </mx:Script>
+   <!-- <model:EnterpriseModelLocator id="model" >
+    </model:EnterpriseModelLocator>
+    -->
+     <mx:CurrencyFormatter id="currencyFormatter"
+            precision="2"
+            useNegativeSign="false" />
+            
+     <mx:ArrayCollection id="pedidoItems" list="{model.pedido.items}"
+   		collectionChange="{onCollectionChange(event)}"/>
+
+	<mx:NumberValidator id="validadorSenia" allowNegative="false" required="true"
+	    source="{txtSenia}" property="text"
+	    decimalSeparator="."
+	    trigger="{btnFinalizarPedido}" triggerEvent="click"
+	    maxValue="{totalPedido}" exceedsMaxError="La seña no puede exceder el total"  
+	    invalidCharError="Numero Invalido" 
+	    requiredFieldError="Debe ingresar la seña"
+	    invalidFormatCharsError="Numero Invalido"     
+	    negativeError="El monto de la seña no puede ser negativo" 
+		/>
+ 
+ 	<mx:StringValidator id="validadorCliente" 
+        source="{cmbCliente}" 
+        property="selectedItem"
+        trigger="{btnFinalizarPedido}" triggerEvent="click"
+        requiredFieldError="Debe seleccionar un cliente" 
+        required="true"/>
+
+ 	<mx:StringValidator id="validadorDomiclilio" 
+        source="{txtDomicilio}" 
+        property="text"
+        enabled="{chkDomicilio.selected}"
+        trigger="{btnFinalizarPedido}" triggerEvent="click"
+        requiredFieldError="Debe especificar un domicilio" 
+        required="true"/>
+        
+    <mx:DateValidator id="validadorFecha"
+        required="{chkDomicilio.selected}"
+        source="{dtFechaEnvio}"
+        property="selectedDate"
+        trigger="{btnFinalizarPedido}" triggerEvent="click"
+        requiredFieldError="Debe especificar la fecha de envio" 
+        />    
+        
+  
+       
+	<mx:DataGrid id="dgPedidoItems" x="10" y="-0.95" height="214" 
+                          doubleClick="modificarItemDePedido(event)" 
+                        doubleClickEnabled="true"
+                          editable="true" dataProvider="{pedidoItems}" change="recalcularTotalPedido()" width="502.4">
+                           <mx:columns>
+                                <mx:DataGridColumn headerText="Libro" editable="false" dataField="pi_nombre_libro" itemRenderer="mx.controls.Label"/>
+                                <mx:DataGridColumn headerText="Autor" editable="false" dataField="pi_autor" itemRenderer="mx.controls.Label"/>
+                                <mx:DataGridColumn headerText="Editorial" editable="false" dataField="pi_editorial" itemRenderer="mx.controls.Label"/>
+                                <mx:DataGridColumn headerText="Precio" editable="false" dataField="pi_precio" width="60" labelFunction="price_labelFunc" textAlign="right"/>
+                                <mx:DataGridColumn headerText="Cantidad" editable="true" dataField="pi_cantidad" width="60" itemEditor="controls.IncrementoNumerico"
+                                     editorDataField="value" textAlign="right" />
+                               <mx:DataGridColumn headerText="Distribuidora" editable="false" dataField="pi_editorial_ed"  labelFunction="nombreEditorial" itemRenderer="mx.controls.Label"/>
+                                
+                               <!--<mx:DataGridColumn labelFunction="nombreEditorial" headerText="Editorial" dataField="pi_editorial_ed" editable="true" editorDataField="selectedItemKey">
+                                    <mx:itemEditor>
+                                        <mx:Component>
+                                        <ns1:GridComboBox dataProvider="{parentDocument.editoriales}" labelField="ed_descripcion" lookupField="pi_editorial_ed" change="dispatchEvent(new mx.events.DataGridEvent(mx.events.DataGridEvent.ITEM_FOCUS_OUT, true, true))"/>
+                                        </mx:Component>
+                                     </mx:itemEditor>      
+                                </mx:DataGridColumn>-->
+                                
+                                <!--<mx:DataGridColumn headerText="Editorial" dataField="pi_editorial_ed" labelFunction="nombreEditorial" editable="true" itemEditor="{combofac}"/>-->
+                               
+                                <!-- <mx:DataGridColumn headerText="Editorial" dataField="pi_editorial" editable="true">
+                                    <mx:itemEditor>
+                                        <mx:Component className="myEditor">
+                                            <mx:VBox backgroundColor="yellow">                            
+                                                <mx:ComboBox id="cmbEditoriales2" 
+                                                    selectedItem="{data.ed_editorial}"
+                                                    dataProvider="{parentDocument.editoriales}"
+                                                       labelField="ed_descripcion"    >                   
+                                                </mx:ComboBox>
+                                            </mx:VBox>
+                                        </mx:Component>                 
+                                    </mx:itemEditor>
+                                </mx:DataGridColumn>-->
+                
+                           </mx:columns>
+                      </mx:DataGrid>
+                      <mx:Label x="527" y="29" text="Cliente:"/>
+                      <mx:Label x="527" y="142" text="Seña:"/>
+                      <mx:TextInput x="616.4" y="140" width="146.6" id="txtSenia" textAlign="right" />
+                      <mx:TextInput x="420.45" y="216" width="93" id="txtTotal" textAlign="right"  />
+                  
+                      <ns1:MatchComboBox x="584" y="27" width="286" id="cmbCliente"  
+                          dataProvider="{model.clientes}"
+                        matchFirstPosition="false" matchCaseSensitive="false" 
+                          labelFunction="getCl_nombre" 
+                          doubleClickEnabled="true"
+                        	doubleClick="selectTextCliente();"/>
+                      <!--
+                      <mx:ComboBox x="541" y="168" width="343"    
+                          id="cmbClientes2"                      
+                          dataProvider="{clientes}"
+                          labelFunction="getCl_nombre"
+                          dropdownFactory="controls.ListSearch">        
+                          -->
+                      <mx:Label x="363.45" y="222" text="TOTAL:" width="49" />
+                      <mx:Button x="520.4" y="0.05" label="Nuevo Pedido" width="120.6" click="nuevoPedido();" id="btnNuevoPedido"/>
+                      <mx:Button x="872" y="27" label="+" width="36" click="nuevoCliente();" id="btnNuevoCliente"/>
+                      <mx:Button x="909" y="27" label="-" width="36" click="confirmaEliminarCliente();" id="btnEliminarCliente"/>
+                      <mx:Button x="947" y="27" label="M" width="34" click="modificarCliente();" id="btnModificarCliente"/>
+                      <mx:Button x="649" y="0.05" id="btnFinalizarPedido" label="Finalizar Pedido en curso" width="171" click="finalizarPedido()"/>
+                      <mx:Canvas x="534" y="56" width="368" height="70" borderStyle="solid" cornerRadius="0" borderColor="#171E23">
+                           <mx:TextInput x="128" y="7" width="209" id="txtDomicilio" enabled="false"/>
+                           <mx:CheckBox x="3" y="11" label="Envío a domicilio:" id="chkDomicilio" click="chkDomicilio_click();"/>
+                           <mx:Label x="4" y="36" text="Fecha de Envío:" width="107"/>
+                           <mx:DateField x="129" y="34" width="207" id="dtFechaEnvio" enabled="false" showToday="true"
+                           	formatString="DD/MM/YYYY"/>
+                      </mx:Canvas>
+                      <mx:Label x="527" y="168" text="Observaciones:" width="93" />
+                      <mx:TextArea x="616" y="167" width="261" height="72" id="txtObservaciones"/>
+                      <mx:Button x="10" y="220" label="Agregar" id="btnAgregarItem" click="agregarItem();"/>
+                      <mx:Button x="91" y="220" label="Eliminar" id="btnEliminarItem" click="eliminarItem();"/>
+                      <mx:Button x="825" y="0.05" id="btnImprimirPedido" label="Imprimir Pedido" width="132" click="imprimirPedido()"/>
+                      <mx:TextInput x="584" y="27" width="277" id="txtCliente" editable="false"/>
+                      
+</mx:Canvas>

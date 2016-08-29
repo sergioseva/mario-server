@@ -1,0 +1,312 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:Canvas xmlns:mx="http://www.adobe.com/2006/mxml" 
+	creationComplete="init();"
+	xmlns:ns1="controls.*" width="984" height="324">
+
+<mx:Script>
+    <![CDATA[
+    	import mx.collections.ArrayCollection;
+    	import mx.rpc.events.FaultEvent;
+    	import mx.rpc.events.ResultEvent;
+    	import modules.pedidos.view.cruds.*;
+    	import modules.pedidos.events.BuscarCatalogoEvent;
+    	import mx.managers.PopUpManager;
+    	import mx.core.IFlexDisplayObject;
+    	import modules.pedidos.model.EnterpriseModelLocator;
+    	import mx.controls.Alert;
+    	import modules.pedidos.vo.PedidoItemVO;
+    	import modules.pedidos.vo.CatalogoVO;
+    	
+    		protected var m:ContextMenu;	
+    		var espereWindow:Alert;  		
+    		
+    		    		
+    		[Bindable] 
+         	protected var model: EnterpriseModelLocator= EnterpriseModelLocator.Instance; 
+         [Bindable] 
+ 			protected var receptor:String;
+ 			        
+         	var modifyCatalogoWindow:IFlexDisplayObject;
+        	var myModifyCatalogoWindow:ModifyCatalogo; 
+            		
+    		public function init():void
+            {
+            createContextMenu();
+            dgCatalogo.contextMenu = m;           
+           	receptor="model.catalogos";
+            }	
+    
+    		protected function createContextMenu():void
+            {
+                m = new ContextMenu();
+                m.hideBuiltInItems();
+                var customItemsArr:Array = new Array();
+                var buscarDescripcionCassasa:ContextMenuItem = new ContextMenuItem("Buscar Titulo en Cassasa");
+                buscarDescripcionCassasa.addEventListener(ContextMenuEvent.MENU_ITEM_SELECT, buscarDescripcionCassasaHandler);
+                customItemsArr.push(buscarDescripcionCassasa);
+                var buscarDescripcionTematika:ContextMenuItem = new ContextMenuItem("Buscar Titulo en Tematika");
+                buscarDescripcionTematika.addEventListener(ContextMenuEvent.MENU_ITEM_SELECT, buscarDescripcionTematikaHandler);
+                customItemsArr.push(buscarDescripcionTematika);
+                var buscarIsbnCassasa:ContextMenuItem = new ContextMenuItem("Buscar Isbn en Cassasa");
+                buscarIsbnCassasa.addEventListener(ContextMenuEvent.MENU_ITEM_SELECT, buscarIsbnCassasaHandler);
+                customItemsArr.push(buscarIsbnCassasa);
+                var buscarIsbnTematika:ContextMenuItem = new ContextMenuItem("Buscar Isbn en Tematika");
+                buscarIsbnTematika.addEventListener(ContextMenuEvent.MENU_ITEM_SELECT, buscarIsbnTematikaHandler);
+                customItemsArr.push(buscarIsbnTematika);
+                var buscarLibrosMismoAutor:ContextMenuItem = new ContextMenuItem("Buscar libros del mismo autor");
+                buscarLibrosMismoAutor.addEventListener(ContextMenuEvent.MENU_ITEM_SELECT, buscarLibrosMismoAutorHandler);
+                customItemsArr.push(buscarLibrosMismoAutor);
+                var copiarPortapapeles:ContextMenuItem = new ContextMenuItem("Copiar nombre en el portapapeles");
+                copiarPortapapeles.addEventListener(ContextMenuEvent.MENU_ITEM_SELECT, copiarPortapalelesHandler);
+                customItemsArr.push(copiarPortapapeles);
+                m.customItems = customItemsArr;
+                m.addEventListener(ContextMenuEvent.MENU_SELECT, contextMenu_menuSelect);
+            }
+            
+            
+            protected function importarCatalogoClick():void {
+            Alert.show( "Desea importar el catalogo?",
+                         "Confirmar ", 
+                         Alert.YES| Alert.NO,
+                         null,                         
+                         handleAlertImportar, 
+                         null,
+                         Alert.YES);  
+            }
+            
+            protected function handleAlertImportar(event:Object):void {
+            if( event.detail == Alert.YES)
+			    {
+			    this.importarCatalogo();
+			    }
+			    else if( event.detail == Alert.NO)
+			    {
+			    // blanquearPedido();
+			    }
+            }
+            protected function importarCatalogo():void {
+                catalogoConverter.importarLuongo();     
+                //Alert.buttonHeight=0;
+                //Alert.buttonWidth=0;             
+                espereWindow = Alert.show("Importando datos, esta operacion puede tardar varios minutos,seguira importando aunque se cierre esta ventana","Aviso");
+            }
+            
+            // Handle the recevied message.
+            protected function resultHandler(event:ResultEvent):void {
+                PopUpManager.removePopUp(espereWindow);
+                Alert.buttonHeight=22;
+                Alert.buttonWidth=60;  
+                Alert.show(event.result.toString());
+            }
+
+            // Handle a message fault.
+            protected function faultHandler(event:FaultEvent):void {
+                PopUpManager.removePopUp(espereWindow);
+                Alert.show("Received fault: " + event.fault + "\n");
+            }
+            
+            protected function modifyCatalogo(event:MouseEvent):void {
+           // show the popup
+            modifyCatalogoWindow=PopUpManager.createPopUp(this,ModifyCatalogo, true);
+            myModifyCatalogoWindow=ModifyCatalogo(modifyCatalogoWindow);
+            myModifyCatalogoWindow.setCatalogo(CatalogoVO(dgCatalogo.selectedItem));
+            myModifyCatalogoWindow.setState("modify");
+           }
+           
+           protected function agregarItemAPedido():void {
+           /*if (esPedido) {*/
+				          model.agregarItemAPedido(CatalogoVO(dgCatalogo.selectedItem));
+           				 /*}
+			else {
+						  model.agregarItemARemito(CatalogoVO(dgCatalogo.selectedItem));
+			}           	*/			 
+           
+           }
+           
+           protected function  expandirContraerCatalogo():void {
+       		LibrosMarioweb(this.parentApplication).expandirContraerCatalogo();
+       		btnExpandirContraer.label=LibrosMarioweb(this.parentApplication).btnExpandirContraer.label;
+           }
+           
+           public function agregarItemACatalogo(c:CatalogoVO):void {
+           model.catalogos.addItem(c);
+           dgCatalogo.executeBindings();
+           }
+             protected function contextMenu_menuSelect(evt:ContextMenuEvent):void {
+                dgCatalogo.selectedIndex = lastRollOverIndex;
+            }
+            
+            protected function buscarDescripcionCassasaHandler(e:ContextMenuEvent):void
+            {
+                var catalogo:CatalogoVO = CatalogoVO(dgCatalogo.selectedItem);
+                catalogo.buscarDescripcionCassasa();
+            }
+        
+            protected function buscarIsbnTematikaHandler(e:ContextMenuEvent):void
+            {
+                var catalogo:CatalogoVO = CatalogoVO(dgCatalogo.selectedItem);
+                catalogo.buscarIsbnTematika();
+            }
+            
+			protected function buscarIsbnCassasaHandler(e:ContextMenuEvent):void
+            {
+                var catalogo:CatalogoVO = CatalogoVO(dgCatalogo.selectedItem);
+                catalogo.buscarIsbnCassasa();
+            }
+        
+            protected function buscarDescripcionTematikaHandler(e:ContextMenuEvent):void
+            {
+                var catalogo:CatalogoVO = CatalogoVO(dgCatalogo.selectedItem);
+                catalogo.buscarDescripcionTematika();
+            }
+            
+             protected function copiarPortapalelesHandler(e:ContextMenuEvent):void
+            {
+                var catalogo:CatalogoVO = CatalogoVO(dgCatalogo.selectedItem);
+                 System.setClipboard(catalogo.cg_descripcion);
+            }
+            
+            protected function buscarLibrosMismoAutorHandler(e:ContextMenuEvent):void
+            {
+                var catalogo:CatalogoVO = CatalogoVO(dgCatalogo.selectedItem);
+                var autor:String; //debo buscar solo por apellido ya que sino me encontraria todos los autores del mismo nombre
+                if (catalogo.cg_autor.search(" ")!=-1) {
+                	autor=catalogo.cg_autor.substring(0,catalogo.cg_autor.search(" "))+" ";
+                } else
+                {autor=catalogo.cg_autor;}
+                
+                new BuscarCatalogoEvent(autor ,"","","","",true, receptor).dispatch();
+            }
+            
+    	    protected function getCatalogos():void {
+                var text:String = searchTerms.text;   
+                var comienzo:Boolean;
+                
+                if (text.length==0)
+                { Alert.buttonHeight=22;
+                Alert.buttonWidth=60;             
+                espereWindow = Alert.show("Debe ingresar algun caracter a buscar","Error");}
+                else {                
+              //  Alert.buttonHeight=0;
+              //  Alert.buttonWidth=0;             
+                
+                comienzo=rbtComienzo.selected;
+                if (cbCriterio.selectedIndex==0) {
+                    new BuscarCatalogoEvent(text,"","","","",comienzo,receptor).dispatch();
+                    
+                } else if (cbCriterio.selectedIndex==1) {
+                	new BuscarCatalogoEvent("",text,"","","",comienzo,receptor).dispatch();                    
+                } else if (cbCriterio.selectedIndex==2) {
+                	new BuscarCatalogoEvent("","",text,"","",comienzo,receptor).dispatch();                     
+                } else if (cbCriterio.selectedIndex==3) {
+                    new BuscarCatalogoEvent("","","",text,"",comienzo,receptor).dispatch();                    
+                } else if (cbCriterio.selectedIndex==4) {
+                	new BuscarCatalogoEvent("","","","",text,comienzo,receptor).dispatch();
+                }else if (cbCriterio.selectedIndex==5) {
+                	//no busco por tema ya que no se muestra y confunde
+                	new BuscarCatalogoEvent(text,text,text,"",text,comienzo,receptor).dispatch();
+                };           
+                }
+            }
+            
+         protected function refresh():void {
+             lblRecCount.text=model.catalogos.length + " registros";
+         }
+         
+         protected function calcRowColor(item:Object, rowIndex:int,dataIndex:int, color:uint):uint
+                 {
+                   if(CatalogoVO(item).createdByLibrosMario())
+                     return 0x49FFAD;
+                   else
+                     return color;
+                 }
+          protected function agregarLibro():void {
+           // show the popup
+            modifyCatalogoWindow=PopUpManager.createPopUp(this,ModifyCatalogo, true);
+            myModifyCatalogoWindow=ModifyCatalogo(modifyCatalogoWindow);
+            myModifyCatalogoWindow.setState("insert");
+           } 
+           
+            protected function rdbtn_click():void {
+                  var text:String = searchTerms.text;
+                
+                if (text.length!=0) {
+                getCatalogos();
+                }
+             }
+    	    
+    	    protected function price_labelFunc(item:Object, column:DataGridColumn):String {
+                return currencyFormatter.format(item[column.dataField]);
+            }
+            
+            protected function selectText():void {
+            	searchTerms.setSelection(0,searchTerms.text.length);
+            }
+        
+         ]]>
+    </mx:Script>
+    
+       <mx:RemoteObject  id="catalogoConverter" destination="CatalogoConverter" source="model.librosmario.CatalogoConverter"
+         result="resultHandler(event);"
+        fault="faultHandler(event);">         
+     </mx:RemoteObject>
+     
+	<mx:CurrencyFormatter id="currencyFormatter"
+            precision="2"
+            useNegativeSign="false" />
+            
+    <mx:Number id="lastRollOverIndex" />                   
+	                   
+	                    <mx:TextInput id="searchTerms"  enter="getCatalogos();" width="328" fontSize="14" fontWeight="bold" x="10" y="1"
+	                    	doubleClickEnabled="true"
+	                    	doubleClick="selectText();" />
+	                    	
+	                    
+                    <mx:ComboBox id="cbCriterio" text="Seleccione un criterio"   enter="getCatalogos();" toolTip="Criterio de busqueda" selectedIndex="5" x="367" y="2">
+                        <mx:ArrayCollection>
+                                	<mx:String>Autor</mx:String>
+                                	<mx:String>Descripción</mx:String>
+                                    <mx:String>Editorial</mx:String>
+                                    <mx:String>Tema</mx:String>
+                                    <mx:String>Isbn</mx:String>
+                                    <mx:String>Todos</mx:String>
+                                </mx:ArrayCollection>
+                    </mx:ComboBox>
+                    <mx:Button click="getCatalogos();" x="338" y="4" icon="@Embed(source='../../../../assets/iconoLupa.gif')" width="22" height="21"/>
+                    <mx:Label id="lblRecCount" text="" width="138" fontWeight="bold" x="532" y="4"/>
+                    
+                     <ns1:RowColorDataGrid id="dgCatalogo" 
+                     	dataProvider="{model.catalogos}" 
+                     	width="945" height="100%" added="refresh();" 
+                        fontSize="12" x="10" y="60"
+                        doubleClick="agregarItemAPedido()" 
+                        doubleClickEnabled="true"
+                        rowColorFunction="calcRowColor"    
+                        itemRollOver="lastRollOverIndex = event.rowIndex"                    
+                     >
+                     <ns1:columns>
+                     <mx:DataGridColumn editable="true" headerText="Descripcion" dataField="cg_descripcion" width="300" itemRenderer="DescripcionRenderer"  itemEditor="mx.controls.TextInput"/>
+                     <mx:DataGridColumn headerText="Autor" dataField="cg_autor" width="100"/>
+                     <mx:DataGridColumn headerText="Editorial" dataField="cg_editorial" width="100"/>
+                     <mx:DataGridColumn id="precio" headerText="Precio" dataField="cg_precio" textAlign="right" width="60"  labelFunction="price_labelFunc"  />
+                     <mx:DataGridColumn headerText="Isbn" dataField="cg_isbn" width="120" textAlign="right" itemRenderer="IsbnRenderer"/>
+                     <mx:DataGridColumn headerText="Observaciones" dataField="cg_observaciones" itemRenderer="mx.controls.Label"/>
+                     </ns1:columns>
+                    </ns1:RowColorDataGrid>
+                    <mx:HBox x="11" y="30" width="327" height="29" borderStyle="solid" borderColor="#0C0D0D" verticalAlign="middle" horizontalAlign="center">
+                        <mx:toolTip>Define en que lugar del texto se va a buscar la palabra</mx:toolTip>
+                        <mx:RadioButton label="Al comienzo" width="130" id="rbtComienzo" selected="true" click="rdbtn_click();"/>
+                        <mx:RadioButton label="En cualquier parte" id="rbtCualquier" click="rdbtn_click();"/>
+                    </mx:HBox>
+                    <mx:Button label="Precio visible" 
+                      click="precio.visible = !precio.visible;"  x="343" y="30"/>
+                    <mx:Button x="729" y="30" label="Agregar Libro" click="agregarLibro();"/>
+                    <mx:Button x="841" y="30" label="Modificar Libro" click="modifyCatalogo(event);" id="btnModificarLibro"/>
+                    <mx:Button label="Importar Catalogo" id="btnImportarCatalogo" 
+                        click="importarCatalogoClick()"
+                       x="819" y="2" />
+                         
+                    <mx:Button id="btnExpandirContraer" label="Expandir Catalogo" width="131"
+                        click="expandirContraerCatalogo();"
+                         x="678" y="2"/>
+</mx:Canvas>

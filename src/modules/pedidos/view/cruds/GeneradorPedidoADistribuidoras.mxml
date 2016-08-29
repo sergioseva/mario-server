@@ -1,0 +1,345 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<mx:Canvas xmlns:mx="http://www.adobe.com/2006/mxml" creationComplete="init();" 
+	height="100%" width="100%" xmlns:ns1="controls.*"  >
+<mx:Script>
+    <![CDATA[
+    	import modules.pedidos.events.ActualizarPedidoItemEvent;
+    	import modules.pedidos.events.ConfirmarPedidoDistribuidoraEvent;
+    	import modules.pedidos.events.ImprimirPedidoItemsEvent;
+    	import mx.binding.utils.BindingUtils;
+    	import modules.pedidos.view.finders.DistribuidoraSelector;
+    	import modules.pedidos.vo.PedidoVO;
+    	import mx.managers.PopUpManager;
+    	import mx.core.IFlexDisplayObject;
+    	import mx.utils.ObjectUtil;
+    	import mx.collections.ListCollectionView;
+    	import modules.pedidos.vo.PedidoItemVO;
+    	import mx.controls.Alert;
+    	import modules.pedidos.vo.EditorialVO;
+    	import mx.events.CollectionEvent;
+    	import modules.pedidos.model.EnterpriseModelLocator;
+    	import modules.pedidos.events.BuscarItemsPedidosADistribuidorasEvent;
+    	
+    	private var pi_a_eliminar:PedidoItemVO;
+    	private var m:ContextMenu;	
+    	[Bindable] 
+         private var model: EnterpriseModelLocator= EnterpriseModelLocator.Instance; 
+         
+        [Bindable]
+        private var listItems:ListCollectionView; //Aca
+        
+        [Bindable]
+        private var listCombo:ArrayCollection;
+        
+       	var consultaPedidoWindow:IFlexDisplayObject;
+        var myConsultaPedidoWindow:PedidoSoloLecturaWindow;   
+        
+        var distribuidoraSelectorWindow:IFlexDisplayObject;
+        var myDistribuidoraSelectorWindow:DistribuidoraSelector;  
+        
+        var dividirPedidoWindow:IFlexDisplayObject;
+        var myDividirPedidoWindow:DividirPedido;
+          
+        private function buscarPendientes():void {
+        new BuscarItemsPedidosADistribuidorasEvent(true).dispatch();
+        } 
+    	
+    	private function init():void
+         {  buscarPendientes();
+            listItems = new ListCollectionView(pedidoItems);
+    		listItems.filterFunction = filrarPorDistribuidoraSeleccionada;
+    		listItems.refresh();
+    		listCombo=ArrayCollection(ObjectUtil.copy(model.editoriales));
+    		var e:EditorialVO= new EditorialVO();
+    		e.ed_editorial_k=0;
+    		e.ed_descripcion="Todos";
+    		listCombo.addItemAt(e,0);
+    		cmbEditoriales.dataProvider=listCombo;
+    		createContextMenu();
+    		dgItems.contextMenu=m;
+    		BindingUtils.bindSetter(handlerDividirPedidoOk, model, "dividirPedidoOk");
+    		BindingUtils.bindSetter(handlerConfirmarPedidoDistribuidoraOk, model, "confirmarPedidoDistribuidoraOk");
+    		BindingUtils.bindSetter(handlerPedidoItemActualizadoOk, model, "pedidoItemActualizadoOk");
+    	}
+         
+        private function createContextMenu():void
+            {
+                m = new ContextMenu();
+                m.hideBuiltInItems();
+                var customItemsArr:Array = new Array();
+                var cambiarDistribuidora:ContextMenuItem = new ContextMenuItem("Cambiar Distribuidora");
+                cambiarDistribuidora.addEventListener(ContextMenuEvent.MENU_ITEM_SELECT, cambiarDistribuidoraHandler);
+                customItemsArr.push(cambiarDistribuidora);
+                var dividirPedidos:ContextMenuItem = new ContextMenuItem("Dividir pedidos");
+                dividirPedidos.addEventListener(ContextMenuEvent.MENU_ITEM_SELECT, dividirPedidosHandler);
+                customItemsArr.push(dividirPedidos);
+                var verDatosPedidoCliente:ContextMenuItem = new ContextMenuItem("Ver datos del pedido del cliente");
+                verDatosPedidoCliente.addEventListener(ContextMenuEvent.MENU_ITEM_SELECT, verDatosPedidoClienteHandler);
+                customItemsArr.push(verDatosPedidoCliente);
+                var eliminarDePendientes:ContextMenuItem = new ContextMenuItem("Eliminar de la lista de pendientes");
+                eliminarDePendientes.addEventListener(ContextMenuEvent.MENU_ITEM_SELECT, eliminarDePendientesHandler);
+                customItemsArr.push(eliminarDePendientes);
+                m.customItems = customItemsArr;
+                m.addEventListener(ContextMenuEvent.MENU_SELECT, contextMenu_menuSelect);
+                
+            }
+            
+        private function cambiarDistribuidoraHandler(e:ContextMenuEvent):void
+        {
+        	
+                //var pi:PedidoItemVO= PedidoItemVO(dgItems.selectedItem);
+                distribuidoraSelectorWindow=PopUpManager.createPopUp(DisplayObject(parentDocument), DistribuidoraSelector);
+            	PopUpManager.centerPopUp(distribuidoraSelectorWindow);
+            	myDistribuidoraSelectorWindow=DistribuidoraSelector(distribuidoraSelectorWindow);
+            	myDistribuidoraSelectorWindow.pedidoItems=listItems.toArray();
+ 				myDistribuidoraSelectorWindow.init();
+                
+        }
+        
+        private function imprimirPedidosItems():void
+        {		
+        		var pilist:Array;
+        		pilist=listItems.toArray();
+        		var distribuidora:String= EditorialVO(cmbEditoriales.selectedItem).ed_descripcion;
+                new ImprimirPedidoItemsEvent(listItems.toArray(),distribuidora).dispatch();
+                
+        }
+        
+        private function confirmarPedido():void 
+        {
+        	var pilist:Array;
+        	pilist=listItems.toArray();
+        	var distribuidora:EditorialVO = EditorialVO(cmbEditoriales.selectedItem);
+        	new ConfirmarPedidoDistribuidoraEvent(listItems.toArray(),distribuidora).dispatch();
+                
+        }
+        	
+
+           private function cliente_labelFunc(item:Object, column:DataGridColumn):String {
+                var p:PedidoVO;
+                p=PedidoVO(item[column.dataField]);
+                return p.getCliente_name_phone();
+            }       
+
+        
+        private function dividirPedidosHandler(e:ContextMenuEvent):void
+        {
+                var pi:PedidoItemVO= PedidoItemVO(dgItems.selectedItem);
+                dividirPedidoWindow=PopUpManager.createPopUp(DisplayObject(parentDocument), DividirPedido);
+            	PopUpManager.centerPopUp(dividirPedidoWindow);
+            	myDividirPedidoWindow=DividirPedido(dividirPedidoWindow);
+            	myDividirPedidoWindow.setPedidoItem(pi);
+                
+        }
+        
+        private function verDatosPedidoClienteHandler(e:ContextMenuEvent):void
+        {
+                /*Alert.show("En construcción");
+                return;*/
+                //model.pedidoConsulta=PedidoItemVO(dgItems.selectedItem).pi_pedido_pe;
+                                
+                consultaPedidoWindow=PopUpManager.createPopUp(DisplayObject(parentDocument), PedidoSoloLecturaWindow);            	PopUpManager.centerPopUp(consultaPedidoWindow);
+            	myConsultaPedidoWindow=PedidoSoloLecturaWindow(consultaPedidoWindow);
+            	myConsultaPedidoWindow.asignarPedido(PedidoItemVO(dgItems.selectedItem).pi_pedido_pe);
+        }
+        
+        private function eliminarDePendientesHandler(e:ContextMenuEvent):void
+        {	 
+        var listaFiltrada:ArrayCollection;
+        
+        listaFiltrada=this.filtrarSeleccionados(listItems.toArray());	 
+        //Alert.show(dgItems.selectedItems.length.toString());
+        if (listaFiltrada.length==1) { 
+        	    pi_a_eliminar=PedidoItemVO(listaFiltrada.getItemAt(0));
+                Alert.show( "Desea eliminar "  + pi_a_eliminar.pi_nombre_libro + " de la lista de libros pendientes de pedir?",
+                         "Confirmar ", 
+                         Alert.YES| Alert.NO,
+                         null,                         
+                         handlerConfirmacionEliminar, 
+                         null,
+                         Alert.YES);
+        		} else {
+        	Alert.show( "Desea eliminar "  + listaFiltrada.length.toString() + " items de la lista de libros pendientes?",
+        				"Confirmar ", 
+                         Alert.YES| Alert.NO,
+                         null,                         
+                         handlerConfirmacionEliminarMultiple, 
+                         null,
+                         Alert.YES);
+        	}
+        }
+        
+        private function filtrarSeleccionados(lista:Array):ArrayCollection {
+        var pi:PedidoItemVO;
+        var result:ArrayCollection;
+        
+        result=new ArrayCollection();
+        for each (pi in lista ) {
+        	if (pi.selected) {
+        		result.addItem(pi);
+        	}
+        }
+        return result;
+        }
+        
+        private function handlerConfirmacionEliminarMultiple(event:Object):void {
+            var pi:PedidoItemVO;
+            if( event.detail == Alert.YES)
+			    {
+			    for each (pi in listItems ) {
+			   	    pi_a_eliminar=PedidoItemVO(pi);
+			   		if (pi_a_eliminar.selected) {
+			   		model.pedidoItemActualizadoOk=false;
+			    	this.eliminarLibroAPedir();
+			    	}
+			    }
+			    }
+			    else if( event.detail == Alert.NO)
+			    {
+			    // blanquearPedido();
+			    }
+            }
+        
+        private function handlerConfirmacionEliminar(event:Object):void {
+            if( event.detail == Alert.YES)
+			    {
+			   	model.pedidoItemActualizadoOk=false;
+			    this.eliminarLibroAPedir();
+			    }
+			    else if( event.detail == Alert.NO)
+			    {
+			    // blanquearPedido();
+			    }
+            }
+            
+        private function eliminarLibroAPedir():void {
+        	pi_a_eliminar.pi_pendiente=false;
+        	new ActualizarPedidoItemEvent(pi_a_eliminar).dispatch();
+        }
+            
+        private function contextMenu_menuSelect(evt:ContextMenuEvent):void {
+                dgItems.selectedIndex = lastRollOverIndex;
+        }
+         
+        private function onCollectionChange(event:CollectionEvent):void {
+ 		    // Update code here
+        }
+        
+        private function filrarPorDistribuidoraSeleccionada(value:Object):Boolean {
+        
+        return (EditorialVO(cmbEditoriales.selectedItem).ed_editorial_k==0 ||
+        PedidoItemVO(value).pi_editorial_ed.equal(EditorialVO(cmbEditoriales.selectedItem)));
+        }
+        
+        private function nombreEditorial(item:Object, column:DataGridColumn): String
+            {   
+                if (!(EditorialVO(item[column.dataField])==null)){
+                return EditorialVO(item[column.dataField]).ed_descripcion;
+                } else return "";
+            }
+            
+         private function refresh():void {
+             lblRecCount.text=listItems.length + " registros";
+         }
+         
+        private function handlerDividirPedidoOk(obj:Object):void {
+		if(!obj) return;
+		this.buscarPendientes();
+			
+		}
+		
+		private function handlerConfirmarPedidoDistribuidoraOk(obj:Object):void {
+		if(!obj) return;
+		this.buscarPendientes();
+			
+		}
+		
+		private function handlerPedidoItemActualizadoOk(obj:Object):void {
+		if(!obj) return;
+		this.buscarPendientes();
+			
+		}
+
+         private function filtrarPedidos():void {
+         //filstra los pedidos por distribuidora, no va contra la base, los filtra de lo que tiene en memoria
+		 	listItems.refresh();
+		 	this.refresh();
+		   }
+         
+     ]]>
+</mx:Script>
+
+ 		<mx:ArrayCollection id="pedidoItems" list="{model.itemsPedidosADistribuidoras}" 			
+   		collectionChange="{onCollectionChange(event)}"/>
+   		
+		<mx:Number id="lastRollOverIndex" />
+		
+		<mx:DataGrid id="dgItems" x="10" y="48" height="100%" 
+	                      doubleClickEnabled="true"
+	                      editable="true" dataProvider="{listItems}" added="refresh();" 
+	                      width="960.4"
+	                      itemRollOver="lastRollOverIndex = event.rowIndex"
+	                       allowMultipleSelection="true">
+	                       <mx:columns>
+	                       		<mx:DataGridColumn headerText="" 
+                           			dataField="recieved" 
+                           			textAlign="center" 
+                           			width="30"                           			 
+                           			editable="false">
+									<mx:itemRenderer>
+										<mx:Component>
+											<mx:CheckBox  change="onChange(event)">
+												<mx:Script>
+													<![CDATA[													
+														private var _myData:Object;
+														
+														import modules.pedidos.vo.PedidoItemVO;
+														override public function set data(o:Object):void
+														{
+															_myData = o;
+															this.selected = PedidoItemVO(o).selected;
+														}		
+														
+														private function onChange(evt:Event):void {
+															PedidoItemVO(_myData).selected = this.selected;
+															trace(_myData);
+														}
+																										
+													]]>
+												</mx:Script>
+											</mx:CheckBox>
+										</mx:Component>
+									</mx:itemRenderer>
+								</mx:DataGridColumn>   
+	                            <mx:DataGridColumn headerText="Libro" editable="false" dataField="pi_nombre_libro" width="200" itemRenderer="mx.controls.Label"/>
+	                            <mx:DataGridColumn headerText="Autor" editable="false" dataField="pi_autor" width="200" itemRenderer="mx.controls.Label"/>
+	                            <mx:DataGridColumn headerText="Editorial" editable="false" dataField="pi_editorial" itemRenderer="mx.controls.Label"/>
+	                            <mx:DataGridColumn headerText="Cantidad" editable="false" dataField="pi_cantidad" width="60" textAlign="right" />
+	                           	<mx:DataGridColumn headerText="Distribuidora" editable="false" dataField="pi_editorial_ed"  labelFunction="nombreEditorial" itemRenderer="mx.controls.Label"/>
+	                           	<mx:DataGridColumn headerText="Cliente" dataField="pi_pedido_pe" labelFunction="cliente_labelFunc" width="200" textAlign="left" itemRenderer="mx.controls.Label" editable="false"/>
+	                           <!--<mx:DataGridColumn labelFunction="nombreEditorial" headerText="Editorial" dataField="pi_editorial_ed" editable="true" editorDataField="selectedItemKey">
+                                    <mx:itemEditor>
+                                        <mx:Component>
+                                        <ns1:GridComboBox dataProvider="{parentDocument.model.editoriales}" labelField="ed_descripcion" lookupField="pi_editorial_ed" change="dispatchEvent(new mx.events.DataGridEvent(mx.events.DataGridEvent.ITEM_FOCUS_OUT, true, true))"/>
+                                        </mx:Component>
+                                     </mx:itemEditor>      
+                                </mx:DataGridColumn>-->
+                                
+	                       </mx:columns>
+	     </mx:DataGrid>
+		<mx:Button x="10" y="18" label="Refrescar" width="105" click="buscarPendientes();"/>
+		<mx:Label x="123" y="20" id="lblRecCount"/>
+		<mx:FormItem label="Filtrar por distribuidora:" width="309" x="246" y="18">
+				<ns1:FindSelectedItemComboBox width="160"	
+					id="cmbEditoriales"		  
+					labelField="ed_descripcion"
+					click="filtrarPedidos();"
+					change="filtrarPedidos();"
+					>      	
+				</ns1:FindSelectedItemComboBox>
+		</mx:FormItem>
+		<mx:Button x="563" y="18" label="Imprimir" width="105" click="imprimirPedidosItems();"/>
+		<mx:Button x="676" y="18" label="Confirmar" width="105" click="confirmarPedido();"/>
+		    
+</mx:Canvas>

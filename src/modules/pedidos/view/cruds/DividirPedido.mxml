@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:TitleWindow xmlns:mx="http://www.adobe.com/2006/mxml" layout="absolute" width="380" height="106"
+	showCloseButton="true" close="closeWindow()" >
+
+<mx:Script>
+    <![CDATA[
+    	import modules.pedidos.events.DividirPedidoItemEvent;
+    	import modules.pedidos.events.ActualizarPedidoItemEvent;
+    	import modules.pedidos.events.InsertarPedidoItemEvent;
+    	import modules.pedidos.events.InsertarPedidoEvent;
+    	import mx.validators.Validator;
+    	import mx.utils.ObjectUtil;
+    	import modules.pedidos.model.EnterpriseModelLocator;
+    	import mx.managers.PopUpManager;
+    	import modules.pedidos.vo.EditorialVO;
+    	import modules.pedidos.vo.PedidoItemVO;
+       [Bindable]
+    	public var pedidoItem:PedidoItemVO;
+    	private var cantidadOriginal:Number;
+    	private var model:EnterpriseModelLocator=EnterpriseModelLocator.Instance;
+    	private var pedidoItemNuevo:PedidoItemVO;
+    	public var result:Boolean; //true=ok, false=cancel
+    	
+    	public function setPedidoItem(pi:PedidoItemVO):void {
+    	  this.pedidoItem=pi;
+    	  cantidadOriginal=pedidoItem.pi_cantidad;
+    	  this.nmsCantidadItems.value=pedidoItem.pi_cantidad;
+    	  validadorCantidadItems.maxValue=pedidoItem.pi_cantidad;
+    	  
+    	}
+    	
+    	private function validar():Boolean{
+			    var validatorArr:Array = new Array();
+			    validatorArr.push(validadorCantidadItems);
+			    var validatorErrorArray:Array = Validator.validateAll(validatorArr);;
+			    var isFormValido:Boolean = validatorErrorArray.length == 0;
+			    return isFormValido;
+    	}
+    	
+    	private function save():void {
+    	 if (!validar()) {            
+            
+            }
+            else {
+    		new DividirPedidoItemEvent(pedidoItem,Number(nmsCantidadItems.value)).dispatch();
+    		}
+    	PopUpManager.removePopUp(this);
+    	}
+    	
+      private function closeWindow():void{
+      	  result=false;
+ 		  PopUpManager.removePopUp(this);
+	  }
+    
+    ]]>
+</mx:Script>
+	    <mx:FormItem label="Seleccione la cantidad de items del primer pedido" width="356" xmlns:ns1="controls.*" height="30">
+	    	    <mx:NumericStepper id="nmsCantidadItems"/>
+    </mx:FormItem>
+ 	<mx:NumberValidator id="validadorCantidadItems" allowNegative="false" required="true"
+	    source="{nmsCantidadItems}" property="value"
+	    decimalSeparator="."
+	    trigger="{btnSave}" triggerEvent="click"
+	    exceedsMaxError="La cantidad no puede exceder la candidad del pedido original"  
+	    invalidCharError="Numero Invalido" 
+	    requiredFieldError="Debe ingresar la cantidad de items"
+	    invalidFormatCharsError="Numero Invalido"     
+	    negativeError="La cantidad no puede ser negativa" 
+		/>
+		
+ <mx:HBox width="356" height="28" verticalAlign="middle" y="34" x="1">
+    <mx:Button id="btnSave" label="Save" click="save()"/>
+    <mx:Button label="Close" click="closeWindow()"/>
+  </mx:HBox>
+</mx:TitleWindow>

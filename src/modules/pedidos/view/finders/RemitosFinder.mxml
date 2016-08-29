@@ -1,0 +1,179 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:Canvas xmlns:mx="http://www.adobe.com/2006/mxml" width="992" 
+	creationComplete="init();" height="474" xmlns:ns1="controls.*" 
+	xmlns:ns2="modules.pedidos.view.cruds.*"
+	xmlns:s="library://ns.adobe.com/flex/spark"	
+	xmlns:flextras="http://www.flextras.com/mxml" 
+	xmlns:ns3="com.adobe.flex.extras.controls.*"
+	  scroll="true">
+
+<mx:Script>
+	<![CDATA[
+		import modules.pedidos.events.ImprimirRemitoEvent;
+		import modules.pedidos.events.BuscarRemitosEvent;
+		import modules.pedidos.vo.RemitoVO;
+		import mx.managers.PopUpManager;
+		import modules.pedidos.view.cruds.PedidoSoloLecturaWindow;
+		import mx.core.IFlexDisplayObject;
+		import mx.events.CollectionEvent;
+		import modules.pedidos.events.ActualizarPedidoItemEvent;
+		import modules.pedidos.vo.PedidoItemVO;
+		import modules.pedidos.events.BuscarPedidosDistribuidoraEvent;
+		import modules.pedidos.events.BuscarItemsPedidosADistribuidorasEvent;
+		import modules.pedidos.vo.PedidoADistribuidoraVO;
+		import modules.pedidos.events.ImprimirPedidoEvent;
+		import modules.pedidos.vo.EditorialVO;
+		import mx.collections.ArrayCollection;
+		import mx.controls.Alert;
+		import modules.pedidos.events.BuscarPedidosEvent;
+		
+	
+
+  import modules.pedidos.vo.PedidoVO;
+  import modules.pedidos.vo.ClienteVO;
+  import modules.pedidos.model.EnterpriseModelLocator;
+  
+  [Bindable] 
+  private var model: EnterpriseModelLocator= EnterpriseModelLocator.Instance; 
+
+  [Bindable] 
+  private var distribuidoras:ArrayCollection;
+  
+  [Bindable] 
+  private var remitoConsulta:RemitoVO ;
+
+[Bindable] 
+  private var items:ArrayCollection;
+
+  
+public function init():void {
+  distribuidoras=new ArrayCollection(model.editoriales.toArray());	
+  cmbDistribuidoras.selectedIndex=-1;
+  }
+         
+  
+  private function date_labelFunc(item:Object, column:DataGridColumn):String {
+                return dateFormatter.format(item[column.dataField]);
+  }
+   
+    
+     
+  private function dgRemitosClick():void
+  {
+ 	remitoConsulta=RemitoVO(dgRemitos.selectedItem);
+ 	this.refreshListaRemitosItems(); 
+  }
+  
+
+  public function btnImprimirClick():void {
+      new ImprimirRemitoEvent(remitoConsulta).dispatch();
+	}
+  private function getEd_nombre(distribuidora : Object): String
+            {
+                return EditorialVO(distribuidora).ed_descripcion;
+            }
+  
+
+private function nombreEditorial(item:Object, column:DataGridColumn): String
+            {   
+                if (!(EditorialVO(item[column.dataField])==null)){
+                return EditorialVO(item[column.dataField]).ed_descripcion;
+                } else return "";
+            }  
+              	
+private function btnBuscarClick():void {
+	
+	 var e:EditorialVO=EditorialVO(cmbDistribuidoras.selectedItem);	
+	 new BuscarRemitosEvent(e,dtFechaDesde.selectedDate,dtFechaHasta.selectedDate,txtLibro.text).dispatch();
+	 
+}
+
+private function refreshListaRemitos():void {
+lblCantPedidos.text= model.remitosConsulta.length.toString() + " registros";
+}
+
+private function refreshListaRemitosItems():void {
+lblCantItems.text= remitoConsulta.items.length.toString() + " registros";
+}
+
+
+
+private function btnLimpiarClick():void {
+	
+	remitoConsulta=null;
+    cmbDistribuidoras.text="";
+    cmbDistribuidoras.selectedIndex=-1;    
+    dtFechaDesde.text=""
+    dtFechaHasta.text="";
+    model.remitosConsulta=new ArrayCollection();
+ this.refreshListaRemitos();
+ this.refreshListaRemitosItems();
+}
+
+
+]]>
+    </mx:Script>
+     
+   
+    <mx:DateFormatter id="dateFormatter" formatString="DD/MM/YYYY" />
+            
+    <mx:Number id="lastRollOverIndexDgPedidos" />
+    <mx:Number id="lastRollOverIndexDgPedidosItems" />
+    
+	<mx:FormItem label="Filtrar por distribuidora:" width="143" x="10" y="10" height="22">
+	</mx:FormItem>
+	<mx:FormItem label="fecha desde:" width="213" x="268" y="10">
+	    <mx:DateField width="115" id="dtFechaDesde"/>
+	</mx:FormItem>
+	<mx:FormItem label="Fecha hasta:" width="213" x="268" y="32" height="22">
+	    <mx:DateField width="115" id="dtFechaHasta"/>
+	</mx:FormItem>
+	<mx:FormItem label="Que contengan libro:" width="123" x="489" y="10" height="26">
+	</mx:FormItem>
+	<mx:Button x="751" y="10" label="Buscar" width="93" id="btnBuscar" click="btnBuscarClick()"/>
+	
+	
+	<mx:DataGrid id="dgRemitos" 
+		dataProvider="{model.remitosConsulta}" x="10" y="62" width="834" height="140" 
+		itemRollOver="lastRollOverIndexDgPedidos = event.rowIndex" 
+		move="dgRemitosClick()"
+		click="dgRemitosClick()" 
+		>
+		
+		<mx:columns>
+			<mx:DataGridColumn headerText="Nro." dataField="re_remito_k" width="50"/>
+			<mx:DataGridColumn headerText="Distribuidora" width="100" dataField="re_distribuidora_ed"  labelFunction="nombreEditorial"/>
+			<mx:DataGridColumn headerText="Fecha" dataField="re_fecha" width="100" labelFunction="date_labelFunc"/>
+			<mx:DataGridColumn headerText="Observaciones"  dataField="re_observaciones"  />
+			<!--<mx:DataGridColumn headerText="Cantidad Libros" dataField="items" labelFunction="cantItems"/>-->
+		</mx:columns>
+	</mx:DataGrid>
+	<mx:Button x="751" y="34" label="Limpiar" width="93" id="btnBuscar0" click="btnLimpiarClick()"/>
+	<mx:Label x="10" y="446" width="99" id="lblCantItems"/>
+	<mx:Label x="10" y="203" width="99" id="lblCantPedidos"/>
+	<mx:TextInput id="txtLibro" width="250" x="489" y="34"/>
+	<ns1:MatchComboBox width="250" id="cmbDistribuidoras"  
+	    dataProvider="{distribuidoras}"
+	  matchFirstPosition="false" matchCaseSensitive="false" 
+	    labelFunction="getEd_nombre" 
+	    doubleClickEnabled="true"
+	   x="10" y="32"/>
+	<mx:Button x="117" y="442" label="Imprimir" width="103" id="btnImprimir" click="btnImprimirClick()"/>
+	<mx:DataGrid id="dgRemitoItemsConsulta" height="220"
+	    editable="false"  
+	    dataProvider="{remitoConsulta.items}" 
+	    width="834"		   
+	     x="10" y="224">
+	                       <mx:columns>      
+	                       		<mx:DataGridColumn headerText="Libro" width="250" editable="false" dataField="ri_nombre_libro" itemRenderer="mx.controls.Label"/>
+	                            <mx:DataGridColumn headerText="Autor" width="100" editable="false" dataField="ri_autor" itemRenderer="mx.controls.Label"/>
+	                            <mx:DataGridColumn headerText="Editorial" width="100" editable="false" dataField="ri_editorial" itemRenderer="mx.controls.Label"/>
+	                            <mx:DataGridColumn headerText="Cant."  editable="false" dataField="ri_cantidad" width="40" textAlign="right" />
+	                            <mx:DataGridColumn headerText="Factura" editable="false" dataField="ri_factura"  textAlign="right" />
+	                            <mx:DataGridColumn headerText="Motivo" editable="false" dataField="ri_motivo" textAlign="right" />
+	                       </mx:columns>                          
+	 </mx:DataGrid>
+	 
+	
+</mx:Canvas>
+

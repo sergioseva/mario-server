@@ -1,0 +1,255 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:Application xmlns:mx="http://www.adobe.com/2006/mxml" layout="absolute"
+    creationComplete="initApp()">
+    <mx:Script>
+        <![CDATA[
+        	import mx.controls.Alert;
+        	import mx.rpc.events.FaultEvent;
+        	import mx.controls.dataGridClasses.DataGridColumn;
+
+        	import mx.utils.ObjectUtil;
+            import mx.collections.Sort;
+            import mx.collections.ListCollectionView;
+            import mx.collections.IViewCursor;
+            import mx.collections.ArrayCollection;
+            import mx.rpc.events.ResultEvent;
+
+            [Bindable]
+            private var itemsRating:ListCollectionView;
+            [Bindable]
+            private var itemHonda:ListCollectionView;
+            [Bindable]
+            private var itemHondaBMW:ListCollectionView;
+
+            [Bindable]
+            private var itemVehicles:ArrayCollection;
+
+            /**
+            * establishing connection between the xml and application
+            * the httpservice is invoked using send method
+            */
+
+            private function initApp():void
+            {
+                itemConn.send();
+            }
+
+            /**
+            * to handle the result event of the http service call
+            *
+            */
+
+            private function resultHandler(event:ResultEvent):void
+            {
+            	itemVehicles = itemConn.lastResult.items.item as ArrayCollection;
+            }
+
+            /**
+            * to handle the fault event of the http service call
+            * here, when the xml is not present
+            */
+
+            private function faultHandler(event:FaultEvent):void
+            {
+            	Alert.show("Values not retrieved","Error");
+            }
+
+            /**
+            * when rating only is selected, row
+            */
+
+            private function handleRating():void
+            {
+                itemsRating = new ListCollectionView(itemVehicles);
+                itemsRating.filterFunction = calcRating;
+                itemsRating.refresh();
+                itemDG.dataProvider = itemsRating;
+            }
+
+            /**
+            * filtering out the values for rating less than eight
+            */
+
+            private function calcRating(value:Object):Boolean
+            {
+            	return Number(value.Rating) < 8;
+            }
+
+            /**
+            * to display honda vehicles only, row
+            */
+
+            private function hondaOnly():void
+            {
+            	itemHonda = new ListCollectionView(itemVehicles);
+            	itemHonda.filterFunction = calcHonda;
+            	itemHonda.refresh();
+            	itemDG.dataProvider = itemHonda;
+            }
+
+            /**
+            * filtering out the values based on honda
+            */
+
+            private function calcHonda(value:Object):Boolean
+            {
+            	return String(value.Name).toUpperCase() == "HONDA";
+            }
+
+            /**
+            * for honda n bmw suv vehicles, row
+            */
+
+            private function hondaBMW():void
+            {
+            	itemHondaBMW = new ListCollectionView(itemVehicles);
+            	itemHondaBMW.filterFunction = calcHondaBMW;
+            	itemHondaBMW.refresh();
+            	itemDG.dataProvider = itemHondaBMW;
+            }
+
+            /**
+            * filtering out honda n bmw suv vehicles
+            */
+
+            private function calcHondaBMW(value:Object):Boolean
+            {
+            	return (String(value.Name).toUpperCase() == "HONDA"||String(value.Name).toUpperCase() == "BMW")&&(String(value.Segment).toUpperCase() == "SUV/CROSSOVER");
+            }
+
+            /**
+            * hiding the name column
+            */
+
+            private function nameHide():void
+            {
+            	//if this is commented, then earlier hidden columns will still be hidden
+            	itemDG.dataProvider = itemVehicles;
+
+            	var totColumns:Array = itemDG.columns;
+            	var dgc:DataGridColumn;
+
+            	//tracing out the datagrid column having the title name
+            	for (var i:int = 0; i < totColumns.length; i++)
+            	{
+            		if(totColumns[i].dataField.toUpperCase() == "NAME")
+            		{
+            			dgc = totColumns[i];
+            			break;
+            		}
+            	}
+            	dgc.visible = false;
+            }
+
+            /**
+            * hiding the segment column
+            */
+
+            private function segmentHide():void
+            {
+            	//if this is commented, then earlier hidden columns will still be hidden
+            	itemDG.dataProvider = itemVehicles;
+
+            	var totColumns:Array = itemDG.columns;
+            	var dgc:DataGridColumn;
+
+            	//tracing out the datagrid column having the title segment
+            	for (var i:int = 0; i < totColumns.length; i++)
+            	{
+            		if(totColumns[i].dataField.toUpperCase() == "SEGMENT")
+            		{
+            			dgc = totColumns[i];
+            			break;
+            		}
+            	}
+            	dgc.visible = false;
+            }
+
+            /**
+            * hiding the rating n price columns
+            */
+
+            private function ratePriceHide():void
+            {
+            	//if this is commented, then earlier hidden columns will still be hidden
+            	itemDG.dataProvider = itemVehicles;
+
+            	var totColumns:Array = itemDG.columns;
+            	var dgc:DataGridColumn;
+
+            	//tracing out the datagrid column having the title price or rating
+            	for (var i:int = 0; i < totColumns.length; i++)
+            	{
+            		if(totColumns[i].dataField.toUpperCase() == "PRICE" || totColumns[i].dataField.toUpperCase() == "RATING")
+            		{
+            			dgc = totColumns[i];
+            			dgc.visible = false;
+            		}
+            	}
+            }
+
+            /**
+            * showing the name n price column of passenger row
+            */
+
+            private function NPP():void
+            {
+            	//if this is commented, then earlier hidden columns will still be hidden
+            	itemDG.dataProvider = itemVehicles;
+
+            	//refresh the dataprovider of datagrid to reflect only the rows of passenger segment
+            	itemHonda = new ListCollectionView(itemVehicles);
+            	itemHonda.filterFunction = function(value:Object):Boolean{return String(value.Segment).toUpperCase() == "PASSENGER";};
+            	itemHonda.refresh();
+            	itemDG.dataProvider = itemHonda;
+
+            	//hide the model n rating columns
+            	var totColumns:Array = itemDG.columns;
+            	var dgc:DataGridColumn;
+            	for (var i:int = 0; i < totColumns.length; i++)
+            	{
+            		if(totColumns[i].dataField.toUpperCase() == "MODEL" || totColumns[i].dataField.toUpperCase() == "RATING")
+            		{
+            			dgc = totColumns[i];
+            			dgc.visible = false;
+            		}
+            	}
+
+            }
+		]]>
+    </mx:Script>
+
+     <mx:HTTPService id="itemConn" url="items.xml" useProxy="false"
+     	result="resultHandler(event)"
+     	fault="faultHandler(event)"/>
+
+    <mx:Panel layout="absolute" left="5" top="5" right="5" bottom="5" title="Show / Hide rows & columns">
+
+		<mx:DataGrid id="itemDG" dataProvider="{itemVehicles}" editable="false" width="100%" height="100%"/>
+
+		<mx:ControlBar>
+			<mx:HBox horizontalGap="100">
+				<mx:VBox>
+					<mx:Label text="Hide / Show rows"/>
+					<mx:LinkButton label="All rows" click="{itemDG.dataProvider = itemVehicles}"/>
+            		<mx:LinkButton label="Rating < 8" click="handleRating()"/>
+            		<mx:LinkButton label="Honda only" click="hondaOnly()"/>
+            		<mx:LinkButton label="Honda & BMW SUV only" click="hondaBMW()"/>
+				</mx:VBox>
+				<mx:VBox>
+					<mx:Label text="Hide / Show columns"/>
+					<mx:LinkButton label="All columns" click="{itemDG.dataProvider = itemVehicles}"/>
+            		<mx:LinkButton label="Hide Name" click="nameHide()"/>
+            		<mx:LinkButton label="Hide Segment" click="segmentHide()"/>
+            		<mx:LinkButton label="Hide Price & Rating" click="ratePriceHide()"/>
+				</mx:VBox>
+				<mx:VBox>
+					<mx:Label text="Hide / Show Both"/>
+					<mx:LinkButton label="All rows & columns" click="{itemDG.dataProvider = itemVehicles}"/>
+            		<mx:LinkButton label="Show only Name, Price of Passenger segment" click="NPP()"/>
+				</mx:VBox>
+			</mx:HBox>
+        </mx:ControlBar>
+    </mx:Panel>
+
+</mx:Application>

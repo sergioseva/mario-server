@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:TitleWindow xmlns:mx="http://www.adobe.com/2006/mxml" layout="absolute" width="318" height="144"
+	showCloseButton="true" close="closeWindow()" activate="init();" mouseMove="init();" mouseOver="init();">
+
+<mx:Script>
+    <![CDATA[
+    	import mx.collections.ArrayCollection;
+    	import mx.controls.List;
+    	import modules.pedidos.events.ActualizarPedidoItemEvent;
+    	import modules.pedidos.model.EnterpriseModelLocator;
+    	import mx.managers.PopUpManager;
+    	import modules.pedidos.vo.EditorialVO;
+    	import modules.pedidos.vo.PedidoItemVO;
+       [Bindable]
+       public var pedidoItems:Array;
+       
+    	public var pedidoItem:PedidoItemVO;
+    	public var pedidoItemsSelected:ArrayCollection;
+    	
+    	
+    	private var model:EnterpriseModelLocator=EnterpriseModelLocator.Instance;
+    	public function init():void
+         {
+         var pi:PedidoItemVO;	 
+         pedidoItemsSelected=new ArrayCollection();
+         
+         for each (pi in pedidoItems ){
+			if (pi.selected) {
+				pedidoItemsSelected.addItem(pi);
+			}	         
+         }	
+         	
+         if (pedidoItemsSelected.length==1) 
+         	{     	
+         	this.title ="Se actualizara 1 pedido";
+         	} else {
+         	this.title="Se actualizaran " + pedidoItemsSelected.length.toString() + " pedidos";
+         	}
+         }
+         
+    	private function save():void {
+    	for each (pedidoItem in pedidoItemsSelected) {
+    		pedidoItem.pi_editorial_ed=EditorialVO(cmbEditoriales.selectedItem);
+    		new ActualizarPedidoItemEvent(pedidoItem).dispatch();
+    	}
+    	
+    	PopUpManager.removePopUp(this);
+    	}
+    	
+      private function closeWindow():void{
+ 		  PopUpManager.removePopUp(this);
+	  }
+    
+    ]]>
+</mx:Script>
+	    <mx:FormItem label="Distribuidora" width="284" xmlns:ns1="controls.*" y="30">
+      
+      <ns1:FindSelectedItemComboBox width="192"	
+      	id="cmbEditoriales"		          	
+      	dataProvider="{model.editoriales}"
+      	labelField="ed_descripcion"
+      	>      	
+      </ns1:FindSelectedItemComboBox>
+    </mx:FormItem>
+ <mx:HBox width="100%" height="28" verticalAlign="middle" y="67">
+    <mx:Button label="Save" click="save()"/>
+    <mx:Button label="Close" click="closeWindow()"/>
+  </mx:HBox>
+ 
+</mx:TitleWindow>

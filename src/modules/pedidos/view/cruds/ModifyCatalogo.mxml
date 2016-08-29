@@ -1,0 +1,117 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:TitleWindow xmlns:mx="http://www.adobe.com/2006/mxml"
+layout="vertical" title="Modificar Catalogo" creationComplete="centerWindow()"  width="440" height="338"
+showCloseButton="true" close="closeWindow()" verticalAlign="top" verticalScrollPolicy="off" horizontalScrollPolicy="off">
+
+<mx:Script>
+    <![CDATA[
+    	import modules.pedidos.view.finders.CatalogosFinder;
+    	import modules.pedidos.vo.CatalogoVO;
+      
+      import mx.managers.PopUpManager;
+      import mx.rpc.events.FaultEvent;
+	  import mx.rpc.events.ResultEvent;
+	  import mx.controls.Alert;	  
+	  	
+      private var catalogo:CatalogoVO;
+      private var state:String;
+       
+      private function centerWindow():void {
+        PopUpManager.centerPopUp(this);
+       
+        
+      }
+      
+      public function setCatalogo(p_catalogo:CatalogoVO):void {
+      catalogo=p_catalogo;
+      txtDescripcion.text=catalogo.cg_descripcion;
+      txtAutor.text=catalogo.cg_autor;
+      txtEditorial.text=catalogo.cg_editorial;
+      txtPrecio.text=currencyFormatter.format(catalogo.cg_precio);
+      txtIsbn.text=catalogo.cg_isbn;
+      txtObservaciones.text=catalogo.cg_observaciones;
+      }
+      
+      public function setState(s:String):void {
+      state=s;
+       if (state=="insert") {
+        this.title="Insertar Libro";
+        } else {
+        this.title="Modificar Libro";
+        } 
+      }
+      
+      private function save():void{
+      if (state=="insert") {
+      catalogo= new CatalogoVO();
+      }
+ 	  catalogo.cg_descripcion=txtDescripcion.text
+      catalogo.cg_autor=txtAutor.text
+      catalogo.cg_editorial=txtEditorial.text;
+      catalogo.cg_precio=Number(txtPrecio.text.replace(",","."));
+      catalogo.cg_isbn=txtIsbn.text;
+      catalogo.cg_observaciones=txtObservaciones.text;
+      catalogo.cg_creador="librosmario"; 
+       
+      if (state=="insert") {      	
+      	catalogoDAO.insert(catalogo);
+      	CatalogosFinder(parentApplication).agregarItemACatalogo(catalogo);
+      	closeWindow();
+      } else {
+      catalogoDAO.update(catalogo);
+      closeWindow();
+      }
+	  }      
+             
+      private function resultHandlerDAO(event:ResultEvent):void {            
+                PopUpManager.removePopUp(this);
+      }
+
+            // Handle a message fault.
+      private function faultHandlerDAO(event:FaultEvent):void {
+                Alert.show("Received fault in DAO: " + event.fault + "\n");
+      }
+      
+      private function closeWindow():void{
+ 		  PopUpManager.removePopUp(this);
+	  }
+
+    ]]>
+</mx:Script>
+
+	<mx:CurrencyFormatter id="currencyFormatter"
+            currencySymbol=""
+            precision="2"
+            useNegativeSign="false" />
+
+	<mx:RemoteObject  id="catalogoDAO" destination="CatalogoDAO" source="model.librosmario.CatalogoDAO"
+		 result="resultHandlerDAO(event);"
+        fault="faultHandlerDAO(event);"
+        />
+        
+            
+  <mx:Form width="386" height="251" horizontalScrollPolicy="off" verticalScrollPolicy="off">
+    <mx:FormItem label="Descripción">
+      <mx:TextInput id="txtDescripcion" width="253"/>
+    </mx:FormItem>
+    <mx:FormItem label="Autor">
+      <mx:TextInput id="txtAutor"/>
+    </mx:FormItem>
+    <mx:FormItem label="Editorial">
+      <mx:TextInput id="txtEditorial"/>
+    </mx:FormItem>
+    <mx:FormItem label="Pecio">
+      <mx:TextInput id="txtPrecio" textAlign="right"/>
+    </mx:FormItem>
+    <mx:FormItem label="Isbn">
+      <mx:TextInput id="txtIsbn" textAlign="right"/>
+    </mx:FormItem>
+    <mx:FormItem label="Observaciones" width="344" height="88">
+      <mx:TextArea width="239" height="86" id="txtObservaciones" wordWrap="true"/>
+    </mx:FormItem>
+  </mx:Form>
+  <mx:HBox width="100%" height="28" verticalAlign="middle">
+    <mx:Button label="Save" click="save()"/>
+    <mx:Button label="Close" click="closeWindow()"/>
+  </mx:HBox>
+</mx:TitleWindow>

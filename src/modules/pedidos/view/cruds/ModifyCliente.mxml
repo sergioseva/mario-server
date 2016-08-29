@@ -1,0 +1,145 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:TitleWindow xmlns:mx="http://www.adobe.com/2006/mxml"
+layout="vertical" title="Modificar Cliente"   width="574" height="342"
+creationComplete="init();"
+showCloseButton="true" close="closeWindow()" verticalAlign="top" verticalScrollPolicy="off" horizontalScrollPolicy="off">
+
+<mx:Script>
+    <![CDATA[
+    	import modules.pedidos.events.ObtenerClientesEvent;
+    	import modules.pedidos.events.ActualizarClienteEvent;
+    	import modules.pedidos.events.InsertarClienteEvent;
+    	import modules.pedidos.model.EnterpriseModelLocator;
+    	import mx.binding.utils.BindingUtils;
+    	import modules.pedidos.vo.ClienteVO;
+      
+      import mx.managers.PopUpManager;
+      import mx.rpc.events.FaultEvent;
+	  import mx.rpc.events.ResultEvent;
+	  import mx.controls.Alert;
+	  
+	  	
+      private var cliente:ClienteVO;
+      private var state:String;
+      
+      [Bindable] 
+         private var model: EnterpriseModelLocator= EnterpriseModelLocator.Instance; 
+         
+      private function init():void
+      {
+     	 BindingUtils.bindSetter(handlerOkInsertarCliente, model, "insertarClienteOk");
+     	 this.centerWindow();
+         
+	 }
+          
+      private function centerWindow():void {
+        PopUpManager.centerPopUp(this);
+      }
+      
+      private function handlerOkInsertarCliente(obj:Object):void {
+		if(!obj) return;
+			closeWindow();
+			
+			
+		}
+      
+      public function setCliente(p_cliente:ClienteVO):void {
+      cliente=p_cliente;
+      txtNombre.text=cliente.cl_nombre;
+      txtDireccion.text=cliente.cl_direccion;
+      txtTelefonoFijo.text=cliente.cl_telefono_fijo;
+      txtTelefonoLaboral.text=cliente.cl_telefono_laboral;
+      txtTelefonoMovil.text=cliente.cl_telefono_movil;
+      txtOtroTelefono.text=cliente.cl_telefono_otro;
+      txtOtroTelefonoDescr.text=cliente.cl_telefono_otro_descr;
+      txtEmail.text=cliente.cl_email;
+      }
+      
+      public function setState(s:String):void {
+      state=s;
+       if (state=="insert") {
+        this.title="Insertar Cliente";
+        } else {
+        this.title="Modificar Cliente";
+        } 
+      }
+      
+      private function save():void{
+      if (state=="insert") {
+      cliente= new ClienteVO();
+      }
+      cliente.cl_nombre=txtNombre.text;
+      cliente.cl_direccion=txtDireccion.text;
+      cliente.cl_telefono_fijo=txtTelefonoFijo.text;
+      cliente.cl_telefono_laboral=txtTelefonoLaboral.text;
+      cliente.cl_telefono_movil=txtTelefonoMovil.text;
+      cliente.cl_telefono_otro=txtOtroTelefono.text;
+      cliente.cl_telefono_otro_descr=txtOtroTelefonoDescr.text;
+      cliente.cl_email=txtEmail.text; 
+      if (state=="insert") {      	
+      	new InsertarClienteEvent(cliente).dispatch();
+      	closeWindow();      	
+      } else {
+      new ActualizarClienteEvent(cliente).dispatch();       
+      closeWindow();
+      }
+	  }  
+	  
+
+
+	    
+	   private function updateClienteDAOSuccess(event:ResultEvent):void {
+	        Alert.show("Cliente modificado correctamente");	    	
+	    }
+	
+	    // Handle a message fault.
+	    private function updateClienteDAOFail(event:FaultEvent):void {
+	        Alert.show("Falla en modificar cliente: " + event.fault + "\n");
+	    }    
+             
+      
+      private function closeWindow():void{
+ 		  PopUpManager.removePopUp(this);
+	  }
+
+    ]]>
+</mx:Script>
+
+	<mx:CurrencyFormatter id="currencyFormatter"
+            currencySymbol=""
+            precision="2"
+            useNegativeSign="false" />
+
+        
+            
+  <mx:Form width="516" height="251" horizontalScrollPolicy="off" verticalScrollPolicy="off">
+    <mx:FormItem label="Nombre" horizontalAlign="left">
+      <mx:TextInput id="txtNombre" width="325"/>
+    </mx:FormItem>
+    <mx:FormItem label="Dirección" horizontalAlign="left">
+      <mx:TextInput id="txtDireccion" width="325"/>
+    </mx:FormItem>
+    <mx:FormItem label="Telefono Fijo" horizontalAlign="left">
+      <mx:TextInput id="txtTelefonoFijo" width="325"/>
+    </mx:FormItem>
+    <mx:FormItem label="Telefono Móvil" horizontalAlign="left">
+      <mx:TextInput id="txtTelefonoMovil" textAlign="right" width="325"/>
+    </mx:FormItem>
+    <mx:FormItem label="Telefono Laboral" horizontalAlign="left">
+      <mx:TextInput id="txtTelefonoLaboral" textAlign="right" width="325"/>
+    </mx:FormItem>
+    <mx:FormItem label="Otro Telefono" horizontalAlign="left">
+      <mx:TextInput id="txtOtroTelefono" textAlign="right" width="325"/>
+    </mx:FormItem>
+    <mx:FormItem label="Otro Telefono Descripción" horizontalAlign="left">
+      <mx:TextInput id="txtOtroTelefonoDescr" textAlign="right" width="325"/>
+    </mx:FormItem>
+    <mx:FormItem label="e-mail" horizontalAlign="left">
+      <mx:TextInput id="txtEmail" textAlign="right" width="325"/>
+    </mx:FormItem>
+  </mx:Form>
+  <mx:HBox width="100%" height="28" verticalAlign="middle">
+    <mx:Button label="Save" click="save()"/>
+    <mx:Button label="Close" click="closeWindow()"/>
+  </mx:HBox>
+</mx:TitleWindow>

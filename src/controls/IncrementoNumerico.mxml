@@ -1,0 +1,5 @@
+<?xml version="1.0"?>
+<!-- itemRenderers\component\myComponents\NSEditor.mxml -->
+<mx:NumericStepper xmlns:mx="http://www.adobe.com/2006/mxml" 
+    stepSize="1" 
+    maximum="100" />

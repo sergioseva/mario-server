@@ -1,0 +1,330 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:Canvas xmlns:mx="http://www.adobe.com/2006/mxml" width="992" 
+	creationComplete="init();" height="534" xmlns:ns1="controls.*" 
+	xmlns:ns2="modules.pedidos.view.cruds.*"
+	xmlns:s="library://ns.adobe.com/flex/spark"	
+	xmlns:flextras="http://www.flextras.com/mxml" 
+	xmlns:ns3="com.adobe.flex.extras.controls.*"
+	  scroll="true">
+
+<mx:Script>
+	<![CDATA[
+		import modules.pedidos.events.BuscarLibrosPedidosEvent;
+		import mx.managers.PopUpManager;
+		import modules.pedidos.view.cruds.PedidoSoloLecturaWindow;
+		import mx.core.IFlexDisplayObject;
+		import mx.events.CollectionEvent;
+		import modules.pedidos.events.ActualizarPedidoItemEvent;
+		import modules.pedidos.vo.PedidoItemVO;
+		import modules.pedidos.events.BuscarPedidosDistribuidoraEvent;
+		import modules.pedidos.events.BuscarItemsPedidosADistribuidorasEvent;
+		import modules.pedidos.vo.PedidoADistribuidoraVO;
+		import modules.pedidos.events.ImprimirPedidoEvent;
+		import modules.pedidos.vo.EditorialVO;
+		import mx.collections.ArrayCollection;
+		import mx.controls.Alert;
+		import modules.pedidos.events.BuscarPedidosEvent;
+		
+	
+
+  import modules.pedidos.vo.PedidoVO;
+  import modules.pedidos.vo.ClienteVO;
+  import modules.pedidos.model.EnterpriseModelLocator;
+  
+  [Bindable] 
+  private var model: EnterpriseModelLocator= EnterpriseModelLocator.Instance; 
+  
+  [Bindable]
+  private var librosPedidos:ArrayCollection;	
+  
+  [Bindable] 
+  private var distribuidoras:ArrayCollection;
+  
+  [Bindable] 
+  private var pedidoDistribuidoraConsulta:PedidoADistribuidoraVO ;
+
+[Bindable] 
+  private var items:ArrayCollection;
+
+  		var consultaPedidoWindow:IFlexDisplayObject;
+        var myConsultaPedidoWindow:PedidoSoloLecturaWindow;   
+  private var m:ContextMenu;	
+public function init():void {
+  distribuidoras=new ArrayCollection(model.editoriales.toArray());	
+  cmbDistribuidoras.selectedIndex=-1;
+  dgPedidosDistribuidoras.addEventListener(CollectionEvent.COLLECTION_CHANGE, handleChangeEvent);
+  createContextMenu();
+  dgPedidoItemsConsulta.contextMenu=m;  
+  
+   
+   librosPedidos=new ArrayCollection(model.librosPedidos.toArray());
+  }
+         
+        private function createContextMenu():void
+            {
+                m = new ContextMenu();
+                m.hideBuiltInItems();
+                var customItemsArr:Array = new Array();
+                var verDatosPedidoCliente:ContextMenuItem = new ContextMenuItem("Ver datos del pedido del cliente");
+                verDatosPedidoCliente.addEventListener(ContextMenuEvent.MENU_ITEM_SELECT, verDatosPedidoClienteHandler);
+                customItemsArr.push(verDatosPedidoCliente);                
+                m.customItems = customItemsArr;
+                m.addEventListener(ContextMenuEvent.MENU_SELECT, contextMenu_menuSelect);
+                
+            }
+            
+            
+     private function verDatosPedidoClienteHandler(e:ContextMenuEvent):void
+        {
+                /*Alert.show("En construcción");
+                return;*/
+                //model.pedidoConsulta=PedidoItemVO(dgItems.selectedItem).pi_pedido_pe;                                
+                consultaPedidoWindow=PopUpManager.createPopUp(DisplayObject(parentDocument), PedidoSoloLecturaWindow);            	PopUpManager.centerPopUp(consultaPedidoWindow);
+            	myConsultaPedidoWindow=PedidoSoloLecturaWindow(consultaPedidoWindow);
+            	myConsultaPedidoWindow.asignarPedido(PedidoItemVO(dgPedidoItemsConsulta.selectedItem).pi_pedido_pe);
+        }
+  
+        private function price_labelFunc(item:Object, column:DataGridColumn):String {
+                return currencyFormatter.format(item[column.dataField]);
+            }
+            
+        private function cliente_labelFunc(item:Object, column:DataGridColumn):String {
+                var p:PedidoVO;
+                p=PedidoVO(item[column.dataField]);
+                return p.getCliente_name_phone();
+            }            
+  
+  
+  private function date_labelFunc(item:Object, column:DataGridColumn):String {
+                return dateFormatter.format(item[column.dataField]);
+  }
+   
+    
+         private function contextMenu_menuSelect(evt:ContextMenuEvent):void {
+                dgPedidoItemsConsulta.selectedIndex = lastRollOverIndexDgPedidosItems;
+        }     
+  
+  private function dgPedidosClick():void
+  {
+ 	pedidoDistribuidoraConsulta=PedidoADistribuidoraVO(dgPedidosDistribuidoras.selectedItem);
+ 	this.refreshListaPedidosItems(); 
+  }
+  
+  private function selecciona(v:Boolean):void {
+  	var pi:PedidoItemVO;
+ 	for each (pi in pedidoDistribuidoraConsulta.items) {
+ 		pi.selected=v;
+ 	}
+  }
+  
+   private function marcaPendientes(v:Boolean):void {
+  	var pi:PedidoItemVO;
+ 	for each (pi in pedidoDistribuidoraConsulta.items) {
+ 		if (pi.selected) {
+ 			pi.pi_pendiente=v;
+ 			new ActualizarPedidoItemEvent(pi).dispatch();
+ 		} 	
+ 	}
+  }
+  
+  	private function btnMarcarPendientesClick():void
+  	{
+  		this.marcaPendientes(true);
+  	}
+  	
+  	private function btnMarcarCompletadosClick():void
+  	{
+  		this.marcaPendientes(false);
+  	}
+  	
+    private function btnSeleccionarTodosClick():void
+  	{
+  	
+ 	this.selecciona(true);
+ 	 
+  	}
+  	
+  	 private function btnSeleccionarNingunoClick():void
+  	{
+  	
+ 	this.selecciona(false);
+ 	 
+  	}
+  
+  public function imprimirPedido():void {
+      //new ImprimirPedidoEvent(pedidoConsulta).dispatch();
+	}
+  private function getEd_nombre(distribuidora : Object): String
+            {
+                return EditorialVO(distribuidora).ed_descripcion;
+            }
+  
+  private function getCl_nombreDataGrid(item:Object, column:DataGridColumn): String
+            {
+                return ClienteVO(item[column.dataField]).cl_nombre + "-" + ClienteVO(item[column.dataField]).cl_telefono_movil;
+            }
+  
+private function nombreEditorial(item:Object, column:DataGridColumn): String
+            {   
+                if (!(EditorialVO(item[column.dataField])==null)){
+                return EditorialVO(item[column.dataField]).ed_descripcion;
+                } else return "";
+            }  
+              	
+private function cantItems(item:Object, column:DataGridColumn): String
+            {   
+                if (!(PedidoADistribuidoraVO(item[column.dataField])==null)){
+                return PedidoADistribuidoraVO(item[column.dataField]).itemsCant().toString();
+                } else return "";
+            }  
+                          		
+private function btnBuscarClick():void {
+	
+	 var e:EditorialVO=EditorialVO(cmbDistribuidoras.selectedItem);	
+	 new BuscarPedidosDistribuidoraEvent(e,dtFechaDesde.selectedDate,dtFechaHasta.selectedDate,acNombreLibro.text,chkPedidosPendientes.selected).dispatch();
+	 
+}
+
+private function refreshListaPedidos():void {
+lblCantPedidos.text= model.pedidosDistribuidorasConsulta.length.toString() + " registros";
+}
+
+private function refreshListaPedidosItems():void {
+lblCantItems.text= pedidoDistribuidoraConsulta.items.length.toString() + " registros";
+}
+
+public function handleChangeEvent(event:CollectionEvent):void
+{
+ this.refreshListaPedidos();
+ refreshListaPedidosItems();
+}
+
+private function btnLimpiarClick():void {
+	
+	pedidoDistribuidoraConsulta=null;
+    cmbDistribuidoras.text="";
+    cmbDistribuidoras.selectedIndex=-1;    
+    acNombreLibro.text="";
+    acNombreLibro.selectedIndex=-1;
+    dtFechaDesde.selectedDate=null;
+    dtFechaHasta.selectedDate=null;
+    model.pedidosDistribuidorasConsulta=new ArrayCollection();
+    this.refreshListaPedidos();
+    this.refreshListaPedidosItems();
+}
+
+private function calcRowColor(item:Object, rowIndex:int,dataIndex:int, color:uint):uint
+                 {
+                   if(PedidoItemVO(item).pi_pendiente)
+                     //return 0xc51414;
+                     return 0xe9c683;
+                   else
+                     return color;
+                 }
+
+]]>
+    </mx:Script>
+    
+   <mx:CurrencyFormatter id="currencyFormatter"
+            precision="2"
+            useNegativeSign="false" />
+    
+    <mx:DateFormatter id="dateFormatter" formatString="DD/MM/YYYY" />
+            
+    <mx:Number id="lastRollOverIndexDgPedidos" />
+    <mx:Number id="lastRollOverIndexDgPedidosItems" />
+    
+	<mx:FormItem label="Filtrar por distribuidora:" width="143" x="10" y="10" height="22">
+	</mx:FormItem>
+	<mx:FormItem label="fecha desde:" width="213" x="10" y="62">
+	    <mx:DateField width="115" id="dtFechaDesde"/>
+	</mx:FormItem>
+	<mx:FormItem label="Fecha hasta:" width="213" x="10" y="88" height="22">
+	    <mx:DateField width="115" id="dtFechaHasta"/>
+	</mx:FormItem>
+	<mx:FormItem label="Que contengan libro:" width="123" x="10" y="118" height="26">
+	</mx:FormItem>
+	<mx:Button x="10" y="192" label="Buscar" width="93" id="btnBuscar" click="btnBuscarClick()"/>
+	
+	
+	<mx:DataGrid id="dgPedidosDistribuidoras" 
+		dataProvider="{model.pedidosDistribuidorasConsulta}" x="10" y="222" width="250" height="219" 
+		itemRollOver="lastRollOverIndexDgPedidos = event.rowIndex;dgPedidosClick()" 
+		move="dgPedidosClick()"
+		click="dgPedidosClick()" 
+		>
+		
+		<mx:columns>
+			<mx:DataGridColumn headerText="Nro." dataField="pd_pedido_a_distribuidora_k" width="50"/>
+			<mx:DataGridColumn headerText="Distribuidora" width="100" dataField="pd_distribuidora_ed"  labelFunction="nombreEditorial"/>
+			<mx:DataGridColumn headerText="Fecha" dataField="pd_fecha" labelFunction="date_labelFunc"/>
+			<!--<mx:DataGridColumn headerText="Cantidad Libros" dataField="items" labelFunction="cantItems"/>-->
+		</mx:columns>
+	</mx:DataGrid>
+	<mx:Button x="111" y="192" label="Limpiar" width="93" id="btnBuscar0" click="btnLimpiarClick()"/>
+	<mx:Button x="369" y="445" label="Seleccionar todos" width="134" id="btnSeleccionarTodos" click="btnSeleccionarTodosClick()"/>
+	<mx:Button x="502" y="445" label="Seleccionar ninguno" width="138" id="btnSeleccionarNinguno" click="btnSeleccionarNingunoClick()"/>
+	<mx:Button x="641" y="445" label="Marcar como pendientes" width="164" id="btnMarcarPendientes" click="btnMarcarPendientesClick()"/>
+	<mx:Button x="805" y="445" label="Marcar como completados" width="183" id="btnMarcarCompletados" click="btnMarcarCompletadosClick()"/>
+	<mx:CheckBox id="chkPedidosPendientes" x="10" y="164" label="Que tengan libros pendientes" width="194"/>
+	<mx:Label x="268" y="445" width="99" id="lblCantItems"/>
+	<mx:Label x="10" y="445" width="99" id="lblCantPedidos"/>
+	<ns1:MatchComboBox width="250" id="cmbDistribuidoras"  
+	    dataProvider="{distribuidoras}"
+	  matchFirstPosition="false" matchCaseSensitive="false" 
+	    labelFunction="getEd_nombre" 
+	    doubleClickEnabled="true"
+	   x="10" y="32"/>
+	<mx:HDividedBox x="268" y="0" width="714" height="441">
+		<ns1:RowColorDataGrid id="dgPedidoItemsConsulta" height="100%" 
+			rowColorFunction="calcRowColor" 
+		    editable="false"  
+		    dataProvider="{pedidoDistribuidoraConsulta.items}" 
+		    width="736"
+		    itemRollOver="lastRollOverIndexDgPedidosItems = event.rowIndex"
+		    >
+		                       <ns1:columns>      
+		                       		<mx:DataGridColumn headerText="" 
+		                       			dataField="recieved" 
+		                       			textAlign="center" 
+		                       			width="30"                           			 
+		                       			editable="false">
+		                       		<mx:itemRenderer>
+		                       			<mx:Component>
+		                       				<mx:CheckBox  change="onChange(event)">
+		                       					<mx:Script>
+													<![CDATA[													
+														private var _myData:Object;
+														
+														import modules.pedidos.vo.PedidoItemVO;
+														override public function set data(o:Object):void
+														{
+															_myData = o;
+															this.selected = PedidoItemVO(o).selected;
+														}		
+														
+														private function onChange(evt:Event):void {
+															PedidoItemVO(_myData).selected = this.selected;
+															trace(_myData);
+														}
+																										
+													]]>
+												</mx:Script>
+		                       				</mx:CheckBox>
+		                       			</mx:Component>
+		                       		</mx:itemRenderer>
+		                       		</mx:DataGridColumn>                      		 
+		                            <mx:DataGridColumn headerText="Libro" width="250" editable="false" dataField="pi_nombre_libro" itemRenderer="mx.controls.Label"/>
+		                            <mx:DataGridColumn headerText="Autor" editable="false" dataField="pi_autor" itemRenderer="mx.controls.Label"/>
+		                            <mx:DataGridColumn headerText="Editorial" editable="false" dataField="pi_editorial" itemRenderer="mx.controls.Label"/>
+		                            <mx:DataGridColumn headerText="Precio" editable="false" dataField="pi_precio" width="60" labelFunction="price_labelFunc" textAlign="right"/>
+		                            <mx:DataGridColumn headerText="Cant." editable="true" dataField="pi_cantidad" width="40" textAlign="right" />
+		                            <mx:DataGridColumn headerText="Cliente" editable="false" dataField="pi_pedido_pe" labelFunction="cliente_labelFunc" width="200" textAlign="left" itemRenderer="mx.controls.Label"/>
+		                       </ns1:columns>                          
+		                       
+		                  </ns1:RowColorDataGrid>
+	</mx:HDividedBox>
+	<ns1:MatchComboBox width="260" id="acNombreLibro"  dataProvider="{model.librosPedidos}"    y="144" x="4"/>
+	 
+	
+</mx:Canvas>

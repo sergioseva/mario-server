@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:Canvas xmlns:mx="http://www.adobe.com/2006/mxml" width="836" height="258" activate="activate()">
+<mx:Script>
+<![CDATA[
+	import modules.pedidos.vo.PedidoVO;
+	import mx.collections.ArrayCollection;
+	import modules.pedidos.events.ImprimirPedidoEvent;
+	import modules.pedidos.model.EnterpriseModelLocator;
+[Bindable] 
+private var model: EnterpriseModelLocator= EnterpriseModelLocator.Instance;
+  
+[Bindable] 
+public var pedido:PedidoVO;
+
+private function price_labelFunc(item:Object, column:DataGridColumn):String {
+        return currencyFormatter.format(item[column.dataField]);
+    }
+               
+public function imprimirPedido():void {
+      new ImprimirPedidoEvent(pedido).dispatch();
+	}    
+	
+private function activate():void {
+	dgPedidoItemsConsulta.invalidateDisplayList();
+}	
+
+private function date_labelFunc(item:Object):String {
+                return dateFormatter.format(item);
+  }
+
+]]>  
+</mx:Script>
+
+   <mx:DateFormatter id="dateFormatter" formatString="DD/MM/YYYY" />
+   
+   <mx:CurrencyFormatter id="currencyFormatter"
+            precision="2"
+            useNegativeSign="false" />
+            
+	<mx:DataGrid id="dgPedidoItemsConsulta" x="1" y="36" height="214"
+	                      editable="false" dataProvider="{pedido.items}" width="675">
+	                       <mx:columns>
+	                            <mx:DataGridColumn headerText="Libro" width="250" editable="false" dataField="pi_nombre_libro" itemRenderer="mx.controls.Label"/>
+	                            <mx:DataGridColumn headerText="Autor" editable="false" dataField="pi_autor" itemRenderer="mx.controls.Label"/>
+	                            <mx:DataGridColumn headerText="Editorial" editable="false" dataField="pi_editorial" itemRenderer="mx.controls.Label"/>
+	                            <mx:DataGridColumn headerText="Precio" editable="false" dataField="pi_precio" width="60" labelFunction="price_labelFunc" textAlign="right"/>
+	                            <mx:DataGridColumn headerText="Cantidad" editable="true" dataField="pi_cantidad" width="60" textAlign="right" />
+	                       </mx:columns>
+	                  </mx:DataGrid>
+	<mx:Label x="680" y="65" text="Observaciones:" width="93" />
+	<mx:TextArea x="682" y="91" width="132" height="157" id="txtObservaciones" text="{pedido.pe_observaciones}"/>
+	<mx:TextArea x="48" y="7" width="266" height="23" id="txtCliente" text="{pedido.getCliente_name_phone()}"/>
+	<mx:Button x="680" y="37" id="btnImprimirPedido" label="Imprimir Pedido" width="132" click="imprimirPedido()"/>
+	<mx:Label x="0" y="10" text="Cliente:" width="51" />	
+	<mx:Label x="322" y="8" text="Fecha:" width="51"   />
+	<mx:DateField x="362" y="6"  selectedDate="{pedido.pe_fecha}"  formatString="DD/MM/YYYY"  editable="false"/>
+	
+</mx:Canvas>

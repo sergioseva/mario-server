@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:TitleWindow xmlns:mx="http://www.adobe.com/2006/mxml" xmlns:views="modules.pedidos.view.cruds.*"
+	 width="868" height="312" title="Detalles del Pedido" initialize="init();" activate="activate()" close="closeWindow()" showCloseButton="true" xmlns:ns1="modules.pedidos.view.finders.*">
+
+<mx:Script>
+    <![CDATA[
+    	import modules.pedidos.vo.PedidoVO;
+    	import modules.pedidos.model.EnterpriseModelLocator;
+    	import mx.managers.PopUpManager;	 
+	  private function closeWindow():void{
+ 		  PopUpManager.removePopUp(this);
+ 	 }
+
+[Bindable] 
+private var model: EnterpriseModelLocator= EnterpriseModelLocator.Instance;
+ 	 	  
+private var pedido:PedidoVO;
+ 	 	  
+public function asignarPedido(p:PedidoVO):void {
+	this.pedido=p;
+	psl.pedido=p
+} 	 	  
+private function init():void{
+ 		 this.activate();
+ 	 }
+ 	  	 	  
+private function activate():void {	
+	/*psl.items
+	psl.txtObservaciones.text=model.pedidoConsulta.pe_observaciones;
+	psl.txtCliente.text=model.pedidoConsulta.cliente.cl_nombre + "-" + model.pedidoConsulta.cliente.cl_telefono_movil;
+	  */
+}		  
+ 		  
+
+	  
+    ]]>
+</mx:Script>
+	<ns1:PedidoSoloLectura id="psl">
+	</ns1:PedidoSoloLectura>
+
+</mx:TitleWindow>

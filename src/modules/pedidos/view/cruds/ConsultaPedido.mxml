@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:Canvas xmlns:mx="http://www.adobe.com/2006/mxml" width="610" height="300"
+	xmlns:views="modules.pedidos.view.cruds.*">
+	                   <views:PedidoSoloLectura x="0" y="0" height="100%" width="100%" top="0">
+                      </views:PedidoSoloLectura>
+</mx:Canvas>

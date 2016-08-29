@@ -1,0 +1,126 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:TitleWindow xmlns:mx="http://www.adobe.com/2006/mxml"
+layout="vertical" title="Modificar Catalogo" creationComplete="centerWindow()"  width="440" height="338"
+showCloseButton="true" close="closeWindow()" 
+verticalAlign="top" verticalScrollPolicy="off" horizontalScrollPolicy="off"
+xmlns:ns1="controls.*">
+
+<mx:Script>
+    <![CDATA[
+    	import modules.pedidos.model.EnterpriseModelLocator;
+    	import modules.pedidos.vo.RemitoItemVO;
+      import modules.pedidos.model.EnterpriseModelLocator;      
+      import modules.pedidos.vo.RemitoItemVO;
+      import mx.collections.ArrayCollection;
+      
+      import mx.managers.PopUpManager;
+      import mx.rpc.events.FaultEvent;
+	  import mx.rpc.events.ResultEvent;
+	  import mx.controls.Alert;
+	  
+	  [Bindable]
+      private var remitoItem:RemitoItemVO;
+      private var state:String;
+      
+      private var model:EnterpriseModelLocator=EnterpriseModelLocator.Instance;
+      
+      
+      private function centerWindow():void {
+        PopUpManager.centerPopUp(this);
+       
+        
+      }
+      
+      public function setRemitoItem(ri:RemitoItemVO):void {
+      remitoItem=ri;
+      txtNombreLibro.text=remitoItem.ri_nombre_libro;
+      txtAutor.text=remitoItem.ri_autor;      
+      txtEditorial.text=remitoItem.ri_editorial;      
+      txtIsbn.text=remitoItem.ri_isbn;
+      txtCantidad.value=remitoItem.ri_cantidad;
+      txtFactura.text=remitoItem.ri_factura;
+      txtMotivo.text=remitoItem.ri_motivo;     
+      }
+      
+      public function setState(s:String):void {
+      state=s;
+       if (state=="insert") {
+        this.title="Insertar Remito";
+        remitoItem= new RemitoItemVO();
+        } else {
+        this.title="Modificar Remito";
+        } 
+      }
+      
+      private function save():void{
+      if (state=="insert") {
+      remitoItem= new RemitoItemVO();
+      }
+      remitoItem.ri_nombre_libro=txtNombreLibro.text;
+      remitoItem.ri_autor=txtAutor.text;      
+      remitoItem.ri_editorial=txtEditorial.text;      
+      remitoItem.ri_isbn=txtIsbn.text;
+      remitoItem.ri_cantidad=txtCantidad.value;
+      remitoItem.ri_factura=txtFactura.text;
+      remitoItem.ri_motivo=txtMotivo.text;
+       if (state=="insert") {   	
+      	 model.agregarRemitoItemARemito(remitoItem);      	 
+      	 closeWindow();
+      } else {
+      //remitoItemDAO.update(catalogo);      
+      closeWindow();
+      }
+      
+	  }      
+             
+      private function resultHandlerDAO(event:ResultEvent):void {            
+                PopUpManager.removePopUp(this);
+      }
+
+            // Handle a message fault.
+      private function faultHandlerDAO(event:FaultEvent):void {
+                Alert.show("Received fault in DAO: " + event.fault + "\n");
+      }
+      
+      private function closeWindow():void{
+ 		  PopUpManager.removePopUp(this);
+	  }
+
+    ]]>
+</mx:Script>
+ 
+
+	<mx:CurrencyFormatter id="currencyFormatter"
+            currencySymbol=""
+            precision="2"
+            useNegativeSign="false" />
+
+            
+  <mx:Form width="386" height="251" horizontalScrollPolicy="off" verticalScrollPolicy="off">
+    <mx:FormItem label="Libro">
+      <mx:TextInput id="txtNombreLibro" width="253" />
+    </mx:FormItem> 
+    <mx:FormItem label="Autor">
+      <mx:TextInput id="txtAutor" />
+    </mx:FormItem>
+    <mx:FormItem label="Editorial">
+      <mx:TextInput id="txtEditorial" />
+    </mx:FormItem>
+    <mx:FormItem label="Isbn">
+      <mx:TextInput id="txtIsbn" textAlign="right" />
+    </mx:FormItem>
+    <mx:FormItem label="Cantidad" width="232">
+      <mx:NumericStepper width="160" id="txtCantidad" minimum="1" maximum="100" stepSize="1" textAlign="right" />
+    </mx:FormItem>
+    <mx:FormItem label="Factura:">
+      <mx:TextInput id="txtFactura" textAlign="right" />
+    </mx:FormItem>
+    <mx:FormItem label="Motivo">
+      <mx:TextInput id="txtMotivo" textAlign="left" width="283" />
+    </mx:FormItem>
+  </mx:Form>
+  <mx:HBox width="100%" height="28" verticalAlign="middle">
+    <mx:Button label="Save" click="save()"/>
+    <mx:Button label="Close" click="closeWindow()"/>
+  </mx:HBox>
+</mx:TitleWindow>
